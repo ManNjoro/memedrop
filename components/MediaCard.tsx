@@ -1,4 +1,3 @@
-// components/MediaCard.tsx
 import React from 'react';
 import { View, Text, Image, Pressable, Dimensions } from 'react-native';
 import { Play, Download, Share2 } from 'lucide-react-native';

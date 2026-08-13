@@ -1,7 +1,3 @@
-// components/BottomNav.tsx
-// Custom tab bar to pass as `tabBar` prop on <Tabs> from expo-router.
-// Usage in app/(tabs)/_layout.tsx:
-//   <Tabs tabBar={(props) => <BottomNav {...props} />}>...</Tabs>
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

@@ -88,10 +88,9 @@ export default function HomeScreen() {
           <Text className="text-text-primary text-2xl font-extrabold">
             Meme<Text className="text-primary">Drop</Text>
           </Text>
-          <View className="flex-row items-center">
+          <View className="flex-row items-center bg-slate-300">
             <Pressable
-            //   onPress={() => router.push('/search')}
-              onPress={() => router.push('/(tabs)')}
+              onPress={() => router.push('/search')}
               hitSlop={8}
               accessibilityLabel="Search"
               className="w-10 h-10 rounded-full bg-surface-alt items-center justify-center mr-3"
@@ -133,8 +132,8 @@ export default function HomeScreen() {
 
         {/* Featured card */}
         <Pressable
-        //   onPress={() => router.push(`/meme/${MOCK_FEED[0].id}`)}
-          onPress={() => router.push(`/(tabs)`)}
+          onPress={() => router.push(`/meme/${MOCK_FEED[0].id}`)}
+          // onPress={() => router.push(`/(tabs)`)}
           className="mx-4 mb-5 rounded-lg overflow-hidden bg-surface"
         >
           <Image
