@@ -1,4 +1,3 @@
-// app/(tabs)/explore.tsx
 import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';

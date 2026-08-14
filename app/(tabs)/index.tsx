@@ -156,8 +156,8 @@ export default function HomeScreen() {
               key={meme.id}
               meme={meme}
               variant="feed"
-            //   onPress={() => router.push(`/meme/${meme.id}`)}
-              onPress={() => router.push(`/(tabs)`)}
+              onPress={() => router.push(`/meme/${meme.id}`)}
+              // onPress={() => router.push(`/(tabs)`)}
               onDownload={() => {}}
               onShare={() => {}}
             />
