@@ -5,10 +5,7 @@ import { ArrowLeft, Plus, PartyPopper } from 'lucide-react-native';
 import { TagChip } from '../../components/Chips';
 import { PrimaryButton } from '../../components/Buttons';
 import { UploadProgress } from '../../components/UploadProgress';
-import {SafeAreaView as RNSafeAreaView} from 'react-native-safe-area-context';
-import {styled} from 'nativewind';
-
-const SafeAreaView = styled(RNSafeAreaView);
+import { SafeAreaView } from '@/components/CustomSafeAreaView';
 
 type Stage = 'form' | 'uploading' | 'success';
 
