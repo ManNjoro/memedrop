@@ -4,10 +4,10 @@ import { useRouter } from "expo-router";
 import { AlertCircle } from "lucide-react-native";
 import React, { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { PrimaryButton } from "../../components/Buttons";
 import { PickedMedia, UploadDropZone } from "../../components/UploadDropZone";
 import { useAuth } from "@clerk/expo";
+import { SafeAreaView } from "@/components/CustomSafeAreaView";
 
 const MAX_IMAGE_MB = 10;
 const MAX_VIDEO_MB = 50;

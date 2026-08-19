@@ -2,12 +2,12 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Image, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Plus, PartyPopper, CloudOff } from 'lucide-react-native';
 import { TagChip } from '../../components/Chips';
 import { PrimaryButton } from '../../components/Buttons';
 import { UploadProgress } from '../../components/UploadProgress';
 import { EmptyState } from '../../components/EmptyState';
+import { SafeAreaView } from '@/components/CustomSafeAreaView';
 
 type Stage = 'form' | 'uploading' | 'success' | 'error';
 

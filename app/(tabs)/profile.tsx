@@ -1,14 +1,13 @@
-// app/(tabs)/profile.tsx
 import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUser, useClerk } from '@clerk/expo';
 import { Settings, Inbox, LogIn } from 'lucide-react-native';
 import { Avatar } from '../../components/Avatar';
 import { MediaCard, Meme } from '../../components/MediaCard';
 import { EmptyState } from '../../components/EmptyState';
 import { PrimaryButton } from '../../components/Buttons';
+import { SafeAreaView } from '@/components/CustomSafeAreaView';
 
 type ProfileTab = 'uploads' | 'saved';
 
@@ -53,7 +52,6 @@ export default function ProfileScreen() {
     [user?.createdAt]
   );
 
-  // Loading Clerk state — avoid flashing the signed-out view.
   if (!isLoaded) {
     return <SafeAreaView className="flex-1 bg-bg" />;
   }

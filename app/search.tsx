@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, ChevronDown, SearchX } from 'lucide-react-native';
 import { SearchBar } from '../components/SearchBar';
 import { FilterChip } from '../components/Chips';
@@ -9,6 +8,7 @@ import { MediaCard, Meme } from '../components/MediaCard';
 import { SkeletonGrid } from '../components/SkeletonLoader';
 import { EmptyState } from '../components/EmptyState';
 import { BottomSheet, SheetOption } from '../components/BottomSheet';
+import { SafeAreaView } from '@/components/CustomSafeAreaView';
 
 type MediaFilter = 'all' | 'images' | 'videos';
 type SortOption = 'Newest' | 'Oldest' | 'Most Downloaded' | 'Most Popular';

@@ -1,12 +1,12 @@
 import React from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Inbox } from 'lucide-react-native';
 import { Avatar } from '../../components/Avatar';
 import { MediaCard, Meme } from '../../components/MediaCard';
 import { EmptyState } from '../../components/EmptyState';
 import { SkeletonGrid } from '../../components/SkeletonLoader';
+import { SafeAreaView } from '@/components/CustomSafeAreaView';
 
 type PublicCreator = {
   username: string;

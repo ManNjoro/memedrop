@@ -1,26 +1,25 @@
-import React, { useState } from 'react';
-import { View, Text, Image, Pressable, ScrollView, Dimensions, Share } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useVideoPlayer, VideoView } from 'expo-video';
+import { SafeAreaView } from '@/components/CustomSafeAreaView';
 import { useEvent } from 'expo';
 import * as Clipboard from 'expo-clipboard';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import {
   ArrowLeft,
-  MoreHorizontal,
   Download,
-  Share2,
   Link2,
-  Play,
-  Pause,
   Maximize,
+  MoreHorizontal,
+  Pause,
+  Play,
+  Share2,
   Volume2,
-  VolumeX,
-  Flag,
+  VolumeX
 } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { Dimensions, Image, Pressable, ScrollView, Share, Text, View } from 'react-native';
 import { Avatar } from '../../components/Avatar';
-import { PrimaryButton } from '../../components/Buttons';
 import { BottomSheet, SheetOption } from '../../components/BottomSheet';
+import { PrimaryButton } from '../../components/Buttons';
 
 const { width } = Dimensions.get('window');
 

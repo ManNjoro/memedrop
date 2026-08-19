@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { SearchBar } from '../../components/SearchBar';
 import { CategoryChip } from '../../components/Chips';
 import { MediaCard, Meme } from '../../components/MediaCard';
+import { SafeAreaView } from '@/components/CustomSafeAreaView';
 
 const EXPLORE_CATEGORIES = [
   'Programming',
