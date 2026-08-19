@@ -1,3 +1,4 @@
+// app/(tabs)/profile.tsx
 import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -73,7 +74,7 @@ export default function ProfileScreen() {
           <PrimaryButton
             label="Sign In"
             onPress={() => router.push('/(auth)/sign-in')}
-            className="w-full max-w-[240px] mb-3"
+            className="w-full max-w-60 mb-3"
           />
           <Pressable onPress={() => router.push('/(auth)/sign-up')}>
             <Text className="text-primary text-sm font-semibold">Create an account</Text>
@@ -93,8 +94,7 @@ export default function ProfileScreen() {
         <View className="flex-row items-center justify-between px-4 pt-2 pb-1">
           <Text className="text-text-primary text-xl font-extrabold">Profile</Text>
           <Pressable
-            // onPress={() => router.push('/settings')}
-            onPress={() => router.push('/(tabs)')}
+            onPress={() => router.push('/settings')}
             hitSlop={8}
             accessibilityLabel="Settings"
             className="w-10 h-10 rounded-full bg-surface-alt items-center justify-center"

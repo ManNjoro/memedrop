@@ -7,6 +7,7 @@ import { ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { PrimaryButton } from "../../components/Buttons";
 import { PickedMedia, UploadDropZone } from "../../components/UploadDropZone";
+import { useAuth } from "@clerk/expo";
 
 const MAX_IMAGE_MB = 10;
 const MAX_VIDEO_MB = 50;
@@ -17,6 +18,7 @@ export default function UploadScreen() {
   const [media, setMedia] = useState<PickedMedia>(null);
   const [durationSec, setDurationSec] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { isSignedIn } = useAuth();
 
   const validateAndSet = async (
     asset: ImagePicker.ImagePickerAsset,
@@ -105,7 +107,10 @@ export default function UploadScreen() {
 
   const onContinue = () => {
     if (!media) return;
-    console.log("Continue selected")
+    if (!isSignedIn) {
+      router.push('/(auth)/sign-in');
+      return;
+    }
     router.push({
       pathname: "/upload/details",
       params: {

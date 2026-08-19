@@ -1,4 +1,3 @@
-// app/meme/[id].tsx
 import React, { useState } from 'react';
 import { View, Text, Image, Pressable, ScrollView, Dimensions, Share } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -215,8 +214,8 @@ export default function MemeDetailsScreen() {
         <View className="px-4 pt-5">
           <Text className="text-text-primary text-xl font-bold mb-3">{meme.title}</Text>
           <Pressable
-            // onPress={() => router.push(`/creator/${meme.creatorName}`)}
-            onPress={() => router.push(`/(tabs)`)}
+            onPress={() => router.push(`/creator/${meme.creatorName}`)}
+            // onPress={() => router.push(`/(tabs)`)}
             className="flex-row items-center mb-5"
             accessibilityLabel={`View @${meme.creatorName}'s profile`}
           >
