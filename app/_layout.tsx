@@ -1,10 +1,11 @@
-// app/_layout.tsx
 import React from 'react';
 import { Stack } from 'expo-router';
 import { ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import '../global.css'; // NativeWind entry — create this with @tailwind base/components/utilities
+import { ToastProvider } from '../components/Toast';
+import { OfflineBanner } from '../components/OfflineBanner';
+import '../global.css';
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 
@@ -24,6 +25,7 @@ function RootLayoutNav() {
       </Stack.Protected>
 
       <Stack.Screen name="(tabs)" />
+
       <Stack.Screen name="meme/[id]" />
       <Stack.Screen name="search" />
       <Stack.Screen name="creator/[username]" />
@@ -40,7 +42,10 @@ export default function RootLayout() {
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <SafeAreaProvider>
-        <RootLayoutNav />
+        <ToastProvider>
+          <OfflineBanner />
+          <RootLayoutNav />
+        </ToastProvider>
       </SafeAreaProvider>
     </ClerkProvider>
   );

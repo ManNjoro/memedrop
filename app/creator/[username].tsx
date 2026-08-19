@@ -1,32 +1,31 @@
-// app/creator/[username].tsx
-// Public, read-only profile — reachable by anyone, signed in or not (see app/_layout.tsx).
-// Only ever show what's public: avatar, username, upload count, and their uploads.
-// Never surface email, private stats, or settings here.
 import React from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, ImageOff } from 'lucide-react-native';
+import { ArrowLeft, Inbox } from 'lucide-react-native';
 import { Avatar } from '../../components/Avatar';
 import { MediaCard, Meme } from '../../components/MediaCard';
 import { EmptyState } from '../../components/EmptyState';
+import { SkeletonGrid } from '../../components/SkeletonLoader';
 
-// Replace with a real fetch-by-username from your API once the backend exists.
-function getCreatorByUsername(username: string) {
-  return {
-    username,
-    avatarUrl: null as string | null,
-    memeCount: 127,
-  };
+type PublicCreator = {
+  username: string;
+  avatarUrl?: string | null;
+  memeCount: number;
+};
+
+function getCreatorByUsername(username: string): PublicCreator {
+  return { username, avatarUrl: null, memeCount: 127 };
 }
 
-function getUploadsForCreator(username: string): Meme[] {
+function getCreatorUploads(username: string): Meme[] {
   return [
     {
       id: 'c1',
-      title: 'When the demo actually works',
-      mediaUrl: `https://picsum.photos/seed/${username}-1/700/900`,
-      mediaType: 'image',
+      title: 'Explaining my code to the rubber duck',
+      mediaUrl: 'https://picsum.photos/seed/rubber-duck-2/700/900',
+      mediaType: 'video',
+      durationSec: 25,
       creatorName: username,
       creatorAvatar: null,
       uploadedAt: '2d ago',
@@ -34,19 +33,18 @@ function getUploadsForCreator(username: string): Meme[] {
     },
     {
       id: 'c2',
-      title: 'Explaining recursion, again',
-      mediaUrl: `https://picsum.photos/seed/${username}-2/700/700`,
-      mediaType: 'video',
-      durationSec: 18,
+      title: 'When the linter finally passes',
+      mediaUrl: 'https://picsum.photos/seed/linter-pass/700/850',
+      mediaType: 'image',
       creatorName: username,
       creatorAvatar: null,
-      uploadedAt: '5d ago',
-      aspectRatio: 1,
+      uploadedAt: '4d ago',
+      aspectRatio: 0.82,
     },
     {
       id: 'c3',
-      title: 'That one WhatsApp group',
-      mediaUrl: `https://picsum.photos/seed/${username}-3/700/950`,
+      title: 'Deploying on a Friday anyway',
+      mediaUrl: 'https://picsum.photos/seed/friday-deploy-2/700/950',
       mediaType: 'image',
       creatorName: username,
       creatorAvatar: null,
@@ -55,13 +53,14 @@ function getUploadsForCreator(username: string): Meme[] {
     },
     {
       id: 'c4',
-      title: 'Monday, again',
-      mediaUrl: `https://picsum.photos/seed/${username}-4/700/850`,
-      mediaType: 'image',
+      title: 'Onboarding a new dev to the codebase',
+      mediaUrl: 'https://picsum.photos/seed/onboarding-dev/700/800',
+      mediaType: 'video',
+      durationSec: 19,
       creatorName: username,
       creatorAvatar: null,
       uploadedAt: '2w ago',
-      aspectRatio: 0.82,
+      aspectRatio: 0.88,
     },
   ];
 }
@@ -69,9 +68,15 @@ function getUploadsForCreator(username: string): Meme[] {
 export default function CreatorProfileScreen() {
   const router = useRouter();
   const { username } = useLocalSearchParams<{ username: string }>();
-  const creator = getCreatorByUsername(username ?? '');
-  const uploads = getUploadsForCreator(username ?? '');
+  const [loading, setLoading] = React.useState(true);
 
+  React.useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 500);
+    return () => clearTimeout(t);
+  }, [username]);
+
+  const creator = getCreatorByUsername(username ?? '');
+  const uploads = getCreatorUploads(username ?? '');
   const left = uploads.filter((_, i) => i % 2 === 0);
   const right = uploads.filter((_, i) => i % 2 === 1);
 
@@ -85,19 +90,17 @@ export default function CreatorProfileScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View className="items-center px-6 pt-3 pb-6">
+        <View className="items-center px-6 pt-2 pb-6">
           <Avatar uri={creator.avatarUrl} name={creator.username} size="lg" />
           <Text className="text-text-primary text-lg font-bold mt-3">@{creator.username}</Text>
           <Text className="text-text-muted text-xs mt-1">{creator.memeCount} memes</Text>
         </View>
 
         <View className="px-4 pb-8">
-          {uploads.length === 0 ? (
-            <EmptyState
-              icon={ImageOff}
-              title="No memes here yet"
-              subtitle={`@${creator.username} hasn't dropped anything yet.`}
-            />
+          {loading ? (
+            <SkeletonGrid count={4} />
+          ) : uploads.length === 0 ? (
+            <EmptyState icon={Inbox} title="No memes here yet" subtitle={`@${creator.username} hasn't dropped anything yet.`} />
           ) : (
             <View className="flex-row" style={{ gap: 12 }}>
               <View style={{ flex: 1 }}>

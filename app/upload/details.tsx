@@ -1,13 +1,15 @@
+// app/upload/details.tsx
 import React, { useState } from 'react';
 import { View, Text, TextInput, Image, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Plus, PartyPopper } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ArrowLeft, Plus, PartyPopper, CloudOff } from 'lucide-react-native';
 import { TagChip } from '../../components/Chips';
 import { PrimaryButton } from '../../components/Buttons';
 import { UploadProgress } from '../../components/UploadProgress';
-import { SafeAreaView } from '@/components/CustomSafeAreaView';
+import { EmptyState } from '../../components/EmptyState';
 
-type Stage = 'form' | 'uploading' | 'success';
+type Stage = 'form' | 'uploading' | 'success' | 'error';
 
 export default function UploadDetailsScreen() {
   const router = useRouter();
@@ -38,19 +40,41 @@ export default function UploadDetailsScreen() {
     setStage('uploading');
     setProgress(0);
 
-    // Simulated upload — replace with real Cloudinary upload + Neon insert via your Node API.
+    // Simulated upload — replace with a real Cloudinary upload + Neon insert
+    // via your Node API. Wrap that call in the same try/catch shape: resolve
+    // -> setStage('success'), reject -> setStage('error').
+    // The ~12% failure chance here just demonstrates the error state; remove
+    // it once this is wired to a real request.
+    const willFail = Math.random() < 0.12;
     const interval = setInterval(() => {
       setProgress((p) => {
         const next = p + 0.08 + Math.random() * 0.08;
         if (next >= 1) {
           clearInterval(interval);
-          setStage('success');
+          setStage(willFail ? 'error' : 'success');
           return 1;
         }
         return next;
       });
     }, 250);
   };
+
+  if (stage === 'error') {
+    return (
+      <SafeAreaView className="flex-1 bg-bg justify-center">
+        <EmptyState
+          icon={CloudOff}
+          title="Oops. That meme didn't make it."
+          subtitle="The upload failed partway through. Your details are still filled in — try again."
+          actionLabel="Try Again"
+          onAction={onDropIt}
+        />
+        <Pressable onPress={() => router.back()} className="items-center py-3">
+          <Text className="text-text-secondary text-sm font-semibold">Back to media</Text>
+        </Pressable>
+      </SafeAreaView>
+    );
+  }
 
   if (stage === 'uploading') {
     return (

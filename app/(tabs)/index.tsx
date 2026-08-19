@@ -1,16 +1,14 @@
-// app/(tabs)/index.tsx
 import React, { useState, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, RefreshControl, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search } from 'lucide-react-native';
 import { CategoryChip } from '../../components/Chips';
 import { MediaCard, Meme } from '../../components/MediaCard';
 import { Avatar } from '../../components/Avatar';
+import { SafeAreaView } from '@/components/CustomSafeAreaView';
 
 const CATEGORIES = ['Trending', 'Latest', 'Videos', 'Images', 'Popular'];
 
-// Realistic placeholder feed — swap mediaUrl with real Cloudinary URLs later.
 const MOCK_FEED: Meme[] = [
   {
     id: '1',
@@ -88,7 +86,7 @@ export default function HomeScreen() {
           <Text className="text-text-primary text-2xl font-extrabold">
             Meme<Text className="text-primary">Drop</Text>
           </Text>
-          <View className="flex-row items-center bg-slate-300">
+          <View className="flex-row items-center">
             <Pressable
               onPress={() => router.push('/search')}
               hitSlop={8}
@@ -98,8 +96,8 @@ export default function HomeScreen() {
               <Search size={20} color="#F5F5F0" />
             </Pressable>
             <Pressable
-            //  onPress={() => router.push('/profile')} 
-             onPress={() => router.push('/(tabs)')} 
+             onPress={() => router.push('/profile')} 
+            //  onPress={() => router.push('/(tabs)')} 
              accessibilityLabel="Your profile">
               <Avatar uri={null} name="You" size="sm" />
             </Pressable>

@@ -1,5 +1,35 @@
+/* global.css */
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/preflight.css" layer(base);
 @import "tailwindcss/utilities.css";
- 
+
 @import "nativewind/theme";
+
+@theme {
+  /* Dark-first palette */
+  --color-bg: #0b0b0d;
+  --color-surface: #161618;
+  --color-surface-alt: #1e1e21;
+  --color-border: #2a2a2e;
+  --color-text-primary: #f5f5f0;
+  --color-text-secondary: #a3a3aa;
+  --color-text-muted: #6b6b72;
+  --color-primary: #8b5cf6;
+  --color-primary-pressed: #7c3aed;
+  --color-secondary: #b4f42a;
+  --color-danger: #f5484b;
+
+  /* Light-mode counterparts — usage: className="bg-bg-light dark:bg-bg" */
+  --color-bg-light: #fafaf8;
+  --color-surface-light: #ffffff;
+  --color-surface-alt-light: #f0f0ee;
+  --color-border-light: #e4e4e2;
+  --color-text-primary-light: #121214;
+  --color-text-secondary-light: #5b5b62;
+
+  /* Radii — overrides Tailwind's defaults for rounded-sm/md/lg/xl */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+}
