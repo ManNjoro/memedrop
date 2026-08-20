@@ -1,29 +1,38 @@
-// app/upload/details.tsx
 import React, { useState } from 'react';
 import { View, Text, TextInput, Image, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Plus, PartyPopper, CloudOff } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '@clerk/expo';
+import { ArrowLeft, Plus, PartyPopper, AlertTriangle } from 'lucide-react-native';
 import { TagChip } from '../../components/Chips';
-import { PrimaryButton } from '../../components/Buttons';
+import { PrimaryButton, SecondaryButton } from '../../components/Buttons';
 import { UploadProgress } from '../../components/UploadProgress';
-import { EmptyState } from '../../components/EmptyState';
-import { SafeAreaView } from '@/components/CustomSafeAreaView';
+import { apiFetch, ApiClientError } from '../../lib/apiClient';
+import { guessMimeType, uploadToCloudinary, buildVideoThumbnailUrl, type UploadSignature } from '../../lib/cloudinaryUpload';
+import { uploadDetailsSchema, fieldErrorsFrom } from '../../lib/validation/uploadSchema';
 
 type Stage = 'form' | 'uploading' | 'success' | 'error';
+type FieldErrors = Partial<Record<'title' | 'description' | 'tags', string>>;
 
 export default function UploadDetailsScreen() {
   const router = useRouter();
-  const { uri, type } = useLocalSearchParams<{ uri: string; type: 'image' | 'video' }>();
+  const { getToken } = useAuth();
+  const { uri, type, durationSec: durationSecParam } = useLocalSearchParams<{
+    uri: string;
+    type: 'image' | 'video';
+    durationSec?: string;
+  }>();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [stage, setStage] = useState<Stage>('form');
   const [progress, setProgress] = useState(0);
-  const [newMemeId, setNewMemeId] = useState<string>('new-1');
-
-  const isValid = title.trim().length >= 3;
+  const [progressLabel, setProgressLabel] = useState('Uploading…');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [newMemeId, setNewMemeId] = useState<string | null>(null);
 
   const addTag = () => {
     const clean = tagInput.trim().replace(/^#/, '').replace(/\s+/g, '');
@@ -35,57 +44,98 @@ export default function UploadDetailsScreen() {
 
   const removeTag = (t: string) => setTags(tags.filter((x) => x !== t));
 
-  const onDropIt = () => {
-    if (!isValid) return;
+  const onDropIt = async () => {
+    const result = uploadDetailsSchema.safeParse({ title, description, tags });
+    if (!result.success) {
+      setFieldErrors(fieldErrorsFrom(result.error));
+      return;
+    }
+    setFieldErrors({});
     setStage('uploading');
+    setErrorMessage(null);
     setProgress(0);
 
-    // Simulated upload — replace with a real Cloudinary upload + Neon insert
-    // via your Node API. Wrap that call in the same try/catch shape: resolve
-    // -> setStage('success'), reject -> setStage('error').
-    // The ~12% failure chance here just demonstrates the error state; remove
-    // it once this is wired to a real request.
-    const willFail = Math.random() < 0.12;
-    const interval = setInterval(() => {
-      setProgress((p) => {
-        const next = p + 0.08 + Math.random() * 0.08;
-        if (next >= 1) {
-          clearInterval(interval);
-          setStage(willFail ? 'error' : 'success');
-          return 1;
-        }
-        return next;
-      });
-    }, 250);
-  };
+    try {
+      const token = await getToken();
 
-  if (stage === 'error') {
-    return (
-      <SafeAreaView className="flex-1 bg-bg justify-center">
-        <EmptyState
-          icon={CloudOff}
-          title="Oops. That meme didn't make it."
-          subtitle="The upload failed partway through. Your details are still filled in — try again."
-          actionLabel="Try Again"
-          onAction={onDropIt}
-        />
-        <Pressable onPress={() => router.back()} className="items-center py-3">
-          <Text className="text-text-secondary text-sm font-semibold">Back to media</Text>
-        </Pressable>
-      </SafeAreaView>
-    );
-  }
+      // 1. Ask our API for a signed Cloudinary upload payload.
+      setProgressLabel('Preparing upload…');
+      const sig = await apiFetch<UploadSignature>('/api/upload/signature', {
+        method: 'POST',
+        token,
+        body: { mediaType: type },
+      });
+
+      // 2. Upload the file straight to Cloudinary — never through our server.
+      setProgressLabel('Uploading…');
+      const mimeType = guessMimeType(uri, type);
+      const cloudinaryResult = await uploadToCloudinary(uri, sig, mimeType, (fraction) => {
+        // Reserve the last slice of the bar for the metadata save below,
+        // so the bar doesn't sit at 100% while we're still waiting on Neon.
+        setProgress(fraction * 0.9);
+      });
+
+      // 3. Persist the metadata to Neon.
+      setProgressLabel('Finishing up…');
+      const meme = await apiFetch<{ id: string }>('/api/memes', {
+        method: 'POST',
+        token,
+        body: {
+          title: result.data.title,
+          description: result.data.description || undefined,
+          tags: result.data.tags,
+          mediaType: type,
+          cloudinaryPublicId: sig.publicId,
+          mediaUrl: cloudinaryResult.secureUrl,
+          thumbnailUrl: type === 'video' ? buildVideoThumbnailUrl(cloudinaryResult.secureUrl) : undefined,
+          durationSec:
+            type === 'video' ? (cloudinaryResult.durationSec ?? Number(durationSecParam)) || undefined : undefined,
+          width: cloudinaryResult.width,
+          height: cloudinaryResult.height,
+        },
+      });
+
+      setProgress(1);
+      setNewMemeId(meme.id);
+      setStage('success');
+    } catch (e) {
+      const message =
+        e instanceof ApiClientError
+          ? e.message
+          : 'That meme didn\u2019t make it. Check your connection and try again.';
+      setErrorMessage(message);
+      setStage('error');
+    }
+  };
 
   if (stage === 'uploading') {
     return (
       <SafeAreaView className="flex-1 bg-bg items-center justify-center px-8">
         <Image source={{ uri }} style={{ width: 140, height: 140, borderRadius: 16 }} resizeMode="cover" />
         <View className="w-full mt-8">
-          <UploadProgress progress={progress} label="Uploading…" />
+          <UploadProgress progress={progress} label={progressLabel} />
         </View>
         <Text className="text-text-muted text-xs mt-4 text-center">
           Hang tight — don&apos;t close the app while your meme drops.
         </Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (stage === 'error') {
+    return (
+      <SafeAreaView className="flex-1 bg-bg items-center justify-center px-8">
+        <View className="w-20 h-20 rounded-full bg-danger/10 items-center justify-center mb-6">
+          <AlertTriangle size={32} color="#F5484B" strokeWidth={1.75} />
+        </View>
+        <Text className="text-text-primary text-xl font-extrabold text-center mb-2">
+          Oops. That meme didn&apos;t make it.
+        </Text>
+        <Text className="text-text-secondary text-sm text-center mb-8 leading-5">{errorMessage}</Text>
+        <PrimaryButton label="Try Again" onPress={onDropIt} className="w-full mb-3" />
+        <Pressable onPress={() => setStage('form')} className="py-3">
+          <Text className="text-text-secondary text-sm font-semibold">Edit Details</Text>
+        </Pressable>
       </SafeAreaView>
     );
   }
@@ -137,15 +187,16 @@ export default function UploadDetailsScreen() {
           <Text className="text-text-secondary text-xs font-semibold uppercase tracking-wide mb-2">Title</Text>
           <TextInput
             value={title}
-            onChangeText={setTitle}
+            onChangeText={(v) => {
+              setTitle(v);
+              if (fieldErrors.title) setFieldErrors((e) => ({ ...e, title: undefined }));
+            }}
             placeholder="Give your meme a title"
             placeholderTextColor="#6B6B72"
             maxLength={80}
             className="bg-surface-alt border border-border rounded-lg px-4 py-3.5 text-text-primary text-base mb-1"
           />
-          {title.length > 0 && title.trim().length < 3 && (
-            <Text className="text-danger text-xs mb-2">Title needs at least 3 characters.</Text>
-          )}
+          {!!fieldErrors.title && <Text className="text-danger text-xs mb-2">{fieldErrors.title}</Text>}
           <View className="mb-5" />
 
           <Text className="text-text-secondary text-xs font-semibold uppercase tracking-wide mb-2">
@@ -153,18 +204,25 @@ export default function UploadDetailsScreen() {
           </Text>
           <TextInput
             value={description}
-            onChangeText={setDescription}
+            onChangeText={(v) => {
+              setDescription(v);
+              if (fieldErrors.description) setFieldErrors((e) => ({ ...e, description: undefined }));
+            }}
             placeholder="Add some context…"
             placeholderTextColor="#6B6B72"
             multiline
             numberOfLines={3}
             maxLength={280}
             textAlignVertical="top"
-            className="bg-surface-alt border border-border rounded-lg px-4 py-3.5 text-text-primary text-base mb-5 h-24"
+            className="bg-surface-alt border border-border rounded-lg px-4 py-3.5 text-text-primary text-base mb-1 h-24"
           />
+          {!!fieldErrors.description && (
+            <Text className="text-danger text-xs mb-2">{fieldErrors.description}</Text>
+          )}
+          <View className="mb-4" />
 
           <Text className="text-text-secondary text-xs font-semibold uppercase tracking-wide mb-2">Tags</Text>
-          <View className="flex-row items-center bg-surface-alt border border-border rounded-lg px-4 mb-3">
+          <View className="flex-row items-center bg-surface-alt border border-border rounded-lg px-4 mb-1">
             <TextInput
               value={tagInput}
               onChangeText={setTagInput}
@@ -178,15 +236,16 @@ export default function UploadDetailsScreen() {
               <Plus size={20} color="#8B5CF6" />
             </Pressable>
           </View>
+          {!!fieldErrors.tags && <Text className="text-danger text-xs mb-2">{fieldErrors.tags}</Text>}
           {tags.length > 0 && (
-            <View className="flex-row flex-wrap mb-2">
+            <View className="flex-row flex-wrap mb-2 mt-2">
               {tags.map((t) => (
                 <TagChip key={t} label={t} onRemove={() => removeTag(t)} />
               ))}
             </View>
           )}
 
-          <PrimaryButton label="Drop It 🚀" onPress={onDropIt} disabled={!isValid} className="mt-4" />
+          <PrimaryButton label="Drop It 🚀" onPress={onDropIt} disabled={title.trim().length < 3} className="mt-4" />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
