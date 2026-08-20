@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUser } from '@clerk/expo';
 import { Settings, Inbox, LogIn, WifiOff } from 'lucide-react-native';
 import { Avatar } from '../../components/Avatar';
@@ -11,6 +10,7 @@ import { PrimaryButton } from '../../components/Buttons';
 import { SkeletonGrid } from '../../components/SkeletonLoader';
 import { useUserWithMemes } from '../../lib/hooks/useUserWithMemes';
 import { toCardMemeFromUserItem } from '../../lib/mappers';
+import { SafeAreaView } from '@/components/CustomSafeAreaView';
 
 type ProfileTab = 'uploads' | 'saved';
 

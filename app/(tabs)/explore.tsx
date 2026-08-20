@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, RefreshControl, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUser } from '@clerk/expo';
 import { Search, WifiOff } from 'lucide-react-native';
 import { CategoryChip } from '../../components/Chips';
@@ -14,6 +13,7 @@ import { toCardMeme } from '../../lib/mappers';
 import { recordDownload } from '../../lib/api/memes';
 import { useToast } from '../../components/Toast';
 import type { FetchMemesParams } from '../../lib/api/memes';
+import { SafeAreaView } from '@/components/CustomSafeAreaView';
 
 const CATEGORIES = ['Trending', 'Latest', 'Videos', 'Images', 'Popular'] as const;
 type Category = (typeof CATEGORIES)[number];
