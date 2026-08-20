@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Image, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/expo';
-import { ArrowLeft, Plus, PartyPopper, AlertTriangle } from 'lucide-react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { AlertTriangle, ArrowLeft, PartyPopper, Plus } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { PrimaryButton } from '../../components/Buttons';
 import { TagChip } from '../../components/Chips';
-import { PrimaryButton, SecondaryButton } from '../../components/Buttons';
 import { UploadProgress } from '../../components/UploadProgress';
-import { apiFetch, ApiClientError } from '../../lib/apiClient';
-import { guessMimeType, uploadToCloudinary, buildVideoThumbnailUrl, type UploadSignature } from '../../lib/cloudinaryUpload';
-import { uploadDetailsSchema, fieldErrorsFrom } from '../../lib/validation/uploadSchema';
+import { ApiClientError, apiFetch } from '../../lib/apiClient';
+import { buildVideoThumbnailUrl, guessMimeType, uploadToCloudinary, type UploadSignature } from '../../lib/cloudinaryUpload';
+import { fieldErrorsFrom, uploadDetailsSchema } from '../../lib/validation/uploadSchema';
 
 type Stage = 'form' | 'uploading' | 'success' | 'error';
 type FieldErrors = Partial<Record<'title' | 'description' | 'tags', string>>;

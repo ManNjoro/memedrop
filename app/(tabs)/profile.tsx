@@ -1,40 +1,18 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useUser, useClerk } from '@clerk/expo';
-import { Settings, Inbox, LogIn } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useUser } from '@clerk/expo';
+import { Settings, Inbox, LogIn, WifiOff } from 'lucide-react-native';
 import { Avatar } from '../../components/Avatar';
-import { MediaCard, Meme } from '../../components/MediaCard';
+import { MediaCard } from '../../components/MediaCard';
 import { EmptyState } from '../../components/EmptyState';
 import { PrimaryButton } from '../../components/Buttons';
-import { SafeAreaView } from '@/components/CustomSafeAreaView';
+import { SkeletonGrid } from '../../components/SkeletonLoader';
+import { useUserWithMemes } from '../../lib/hooks/useUserWithMemes';
+import { toCardMemeFromUserItem } from '../../lib/mappers';
 
 type ProfileTab = 'uploads' | 'saved';
-
-// Placeholder — replace with a real fetch of this user's uploads/saved memes once the backend exists.
-const MOCK_MY_MEMES: Meme[] = [
-  {
-    id: 'm1',
-    title: 'When the demo actually works',
-    mediaUrl: 'https://picsum.photos/seed/demo-works/700/900',
-    mediaType: 'image',
-    creatorName: 'you',
-    creatorAvatar: null,
-    uploadedAt: '3d ago',
-    aspectRatio: 0.78,
-  },
-  {
-    id: 'm2',
-    title: 'Friday deploy energy',
-    mediaUrl: 'https://picsum.photos/seed/friday-deploy/700/700',
-    mediaType: 'video',
-    durationSec: 12,
-    creatorName: 'you',
-    creatorAvatar: null,
-    uploadedAt: '1w ago',
-    aspectRatio: 1,
-  },
-];
 
 function formatMemberSince(date: Date | null | undefined) {
   if (!date) return '';
@@ -44,14 +22,19 @@ function formatMemberSince(date: Date | null | undefined) {
 export default function ProfileScreen() {
   const router = useRouter();
   const { isSignedIn, isLoaded, user } = useUser();
-  const { signOut } = useClerk();
   const [tab, setTab] = useState<ProfileTab>('uploads');
+
+  const { profile, memes, loading, error, refresh } = useUserWithMemes(isSignedIn ? user?.username ?? undefined : undefined);
 
   const memberSince = useMemo(
     () => formatMemberSince(user?.createdAt ? new Date(user.createdAt) : null),
     [user?.createdAt]
   );
 
+  const totalDownloads = useMemo(() => memes.reduce((sum, m) => sum + m.downloadsCount, 0), [memes]);
+  const totalLikes = useMemo(() => memes.reduce((sum, m) => sum + m.likesCount, 0), [memes]);
+
+  // Loading Clerk state — avoid flashing the signed-out view.
   if (!isLoaded) {
     return <SafeAreaView className="flex-1 bg-bg" />;
   }
@@ -82,7 +65,10 @@ export default function ProfileScreen() {
     );
   }
 
-  const uploads = tab === 'uploads' ? MOCK_MY_MEMES : [];
+  // "Saved" isn't backed by an endpoint yet (the saved_memes table exists in
+  // the schema, but there's no GET /api/users/:username/saved route yet) —
+  // shows its empty state permanently until that's built.
+  const uploads = tab === 'uploads' ? memes : [];
   const left = uploads.filter((_, i) => i % 2 === 0);
   const right = uploads.filter((_, i) => i % 2 === 1);
 
@@ -108,15 +94,15 @@ export default function ProfileScreen() {
 
           <View className="flex-row mt-6" style={{ gap: 32 }}>
             <View className="items-center">
-              <Text className="text-text-primary text-lg font-extrabold">{MOCK_MY_MEMES.length}</Text>
+              <Text className="text-text-primary text-lg font-extrabold">{profile?.memeCount ?? memes.length}</Text>
               <Text className="text-text-muted text-xs mt-0.5">Uploads</Text>
             </View>
             <View className="items-center">
-              <Text className="text-text-primary text-lg font-extrabold">312</Text>
+              <Text className="text-text-primary text-lg font-extrabold">{totalDownloads}</Text>
               <Text className="text-text-muted text-xs mt-0.5">Downloads</Text>
             </View>
             <View className="items-center">
-              <Text className="text-text-primary text-lg font-extrabold">1.2k</Text>
+              <Text className="text-text-primary text-lg font-extrabold">{totalLikes}</Text>
               <Text className="text-text-muted text-xs mt-0.5">Likes</Text>
             </View>
           </View>
@@ -143,7 +129,11 @@ export default function ProfileScreen() {
         </View>
 
         <View className="px-4 pb-8">
-          {uploads.length === 0 ? (
+          {tab === 'uploads' && loading ? (
+            <SkeletonGrid count={4} />
+          ) : tab === 'uploads' && error ? (
+            <EmptyState icon={WifiOff} title="Couldn't load your memes" subtitle={error} actionLabel="Try Again" onAction={refresh} />
+          ) : uploads.length === 0 ? (
             <EmptyState
               icon={Inbox}
               title={tab === 'uploads' ? "You haven't dropped anything yet." : 'Nothing saved yet.'}
@@ -158,13 +148,23 @@ export default function ProfileScreen() {
           ) : (
             <View className="flex-row" style={{ gap: 12 }}>
               <View style={{ flex: 1 }}>
-                {left.map((meme) => (
-                  <MediaCard key={meme.id} meme={meme} variant="grid" onPress={() => router.push(`/meme/${meme.id}`)} />
+                {left.map((item) => (
+                  <MediaCard
+                    key={item.id}
+                    meme={toCardMemeFromUserItem(item, user?.username ?? 'you', user?.imageUrl)}
+                    variant="grid"
+                    onPress={() => router.push(`/meme/${item.id}`)}
+                  />
                 ))}
               </View>
               <View style={{ flex: 1 }}>
-                {right.map((meme) => (
-                  <MediaCard key={meme.id} meme={meme} variant="grid" onPress={() => router.push(`/meme/${meme.id}`)} />
+                {right.map((item) => (
+                  <MediaCard
+                    key={item.id}
+                    meme={toCardMemeFromUserItem(item, user?.username ?? 'you', user?.imageUrl)}
+                    variant="grid"
+                    onPress={() => router.push(`/meme/${item.id}`)}
+                  />
                 ))}
               </View>
             </View>

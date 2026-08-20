@@ -1,85 +1,63 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, RefreshControl, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Search } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useUser } from '@clerk/expo';
+import { Search, WifiOff } from 'lucide-react-native';
 import { CategoryChip } from '../../components/Chips';
-import { MediaCard, Meme } from '../../components/MediaCard';
+import { MediaCard } from '../../components/MediaCard';
 import { Avatar } from '../../components/Avatar';
-import { SafeAreaView } from '@/components/CustomSafeAreaView';
+import { EmptyState } from '../../components/EmptyState';
+import { SkeletonFeedList } from '../../components/SkeletonLoader';
+import { useMemeFeed } from '../../lib/hooks/useMemeFeed';
+import { toCardMeme } from '../../lib/mappers';
+import { recordDownload } from '../../lib/api/memes';
+import { useToast } from '../../components/Toast';
+import type { FetchMemesParams } from '../../lib/api/memes';
 
-const CATEGORIES = ['Trending', 'Latest', 'Videos', 'Images', 'Popular'];
+const CATEGORIES = ['Trending', 'Latest', 'Videos', 'Images', 'Popular'] as const;
+type Category = (typeof CATEGORIES)[number];
 
-const MOCK_FEED: Meme[] = [
-  {
-    id: '1',
-    title: 'When you push directly to production',
-    mediaUrl: 'https://picsum.photos/seed/prod-push/800/1000',
-    mediaType: 'image',
-    creatorName: 'kevin_devops',
-    creatorAvatar: null,
-    uploadedAt: '2h ago',
-    aspectRatio: 0.8,
-  },
-  {
-    id: '2',
-    title: 'Monday morning stand-up energy',
-    mediaUrl: 'https://picsum.photos/seed/standup/800/900',
-    mediaType: 'video',
-    durationSec: 14,
-    creatorName: 'wanjiru.exe',
-    creatorAvatar: null,
-    uploadedAt: '5h ago',
-    aspectRatio: 0.9,
-  },
-  {
-    id: '3',
-    title: 'That one group project member',
-    mediaUrl: 'https://picsum.photos/seed/group-project/800/800',
-    mediaType: 'image',
-    creatorName: 'brian_ke',
-    creatorAvatar: null,
-    uploadedAt: '1d ago',
-    aspectRatio: 1,
-  },
-  {
-    id: '4',
-    title: 'CSS centering a div, explained',
-    mediaUrl: 'https://picsum.photos/seed/css-center/800/1100',
-    mediaType: 'video',
-    durationSec: 42,
-    creatorName: 'devwithamani',
-    creatorAvatar: null,
-    uploadedAt: '1d ago',
-    aspectRatio: 0.75,
-  },
-  {
-    id: '5',
-    title: 'Harambee Stars fans rn',
-    mediaUrl: 'https://picsum.photos/seed/harambee/800/950',
-    mediaType: 'image',
-    creatorName: 'mwas_soko',
-    creatorAvatar: null,
-    uploadedAt: '2d ago',
-    aspectRatio: 0.85,
-  },
-];
+function paramsForCategory(category: Category): FetchMemesParams {
+  switch (category) {
+    case 'Trending':
+      return { sort: 'most_popular', limit: 10 };
+    case 'Latest':
+      return { sort: 'newest', limit: 10 };
+    case 'Videos':
+      return { mediaType: 'video', sort: 'newest', limit: 10 };
+    case 'Images':
+      return { mediaType: 'image', sort: 'newest', limit: 10 };
+    case 'Popular':
+      return { sort: 'most_downloaded', limit: 10 };
+  }
+}
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [activeCategory, setActiveCategory] = useState('Trending');
-  const [refreshing, setRefreshing] = useState(false);
+  const { user } = useUser();
+  const { showToast } = useToast();
+  const [activeCategory, setActiveCategory] = useState<Category>('Trending');
 
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    // TODO: refetch feed from API
-    setTimeout(() => setRefreshing(false), 1200);
-  }, []);
+  const params = useMemo(() => paramsForCategory(activeCategory), [activeCategory]);
+  const { memes, loading, refreshing, error, refresh } = useMemeFeed(params);
+
+  const onDownload = async (id: string) => {
+    try {
+      await recordDownload(id);
+      showToast({ message: 'Download started', variant: 'success' });
+    } catch {
+      showToast({ message: 'Couldn\u2019t start the download. Try again.', variant: 'error' });
+    }
+  };
+
+  const [featured, ...rest] = memes;
 
   return (
     <SafeAreaView edges={['top']} className="flex-1 bg-bg">
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8B5CF6" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#8B5CF6" />}
       >
         {/* Top bar */}
         <View className="flex-row items-center justify-between px-4 pt-2 pb-4">
@@ -95,11 +73,8 @@ export default function HomeScreen() {
             >
               <Search size={20} color="#F5F5F0" />
             </Pressable>
-            <Pressable
-             onPress={() => router.push('/profile')} 
-            //  onPress={() => router.push('/(tabs)')} 
-             accessibilityLabel="Your profile">
-              <Avatar uri={null} name="You" size="sm" />
+            <Pressable onPress={() => router.push('/(tabs)/profile')} accessibilityLabel="Your profile">
+              <Avatar uri={user?.imageUrl} name={user?.username ?? 'You'} size="sm" />
             </Pressable>
           </View>
         </View>
@@ -128,39 +103,55 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
-        {/* Featured card */}
-        <Pressable
-          onPress={() => router.push(`/meme/${MOCK_FEED[0].id}`)}
-          // onPress={() => router.push(`/(tabs)`)}
-          className="mx-4 mb-5 rounded-lg overflow-hidden bg-surface"
-        >
-          <Image
-            source={{ uri: MOCK_FEED[0].mediaUrl }}
-            style={{ width: '100%', height: 260 }}
-            resizeMode="cover"
-          />
-          <View className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-black/40">
-            <Text className="text-text-primary text-xs font-bold uppercase tracking-wide mb-1">
-              🔥 Featured
-            </Text>
-            <Text className="text-text-primary text-lg font-bold">{MOCK_FEED[0].title}</Text>
+        {loading ? (
+          <View className="px-4">
+            <SkeletonFeedList count={3} />
           </View>
-        </Pressable>
+        ) : error ? (
+          <EmptyState icon={WifiOff} title="Couldn't load your feed" subtitle={error} actionLabel="Try Again" onAction={refresh} />
+        ) : memes.length === 0 ? (
+          <EmptyState
+            icon={WifiOff}
+            title="Nothing dropped here yet."
+            subtitle="Be the first to drop a meme in this category."
+          />
+        ) : (
+          <>
+            {/* Featured card — the top result for the active category */}
+            {featured && (
+              <Pressable
+                onPress={() => router.push(`/meme/${featured.id}`)}
+                className="mx-4 mb-5 rounded-lg overflow-hidden bg-surface"
+              >
+                <Image
+                  source={{ uri: toCardMeme(featured).mediaUrl }}
+                  style={{ width: '100%', height: 260 }}
+                  resizeMode="cover"
+                />
+                <View className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-black/40">
+                  <Text className="text-text-primary text-xs font-bold uppercase tracking-wide mb-1">
+                    🔥 Featured
+                  </Text>
+                  <Text className="text-text-primary text-lg font-bold">{featured.title}</Text>
+                </View>
+              </Pressable>
+            )}
 
-        {/* Feed */}
-        <View className="px-4 pb-6">
-          {MOCK_FEED.slice(1).map((meme) => (
-            <MediaCard
-              key={meme.id}
-              meme={meme}
-              variant="feed"
-              onPress={() => router.push(`/meme/${meme.id}`)}
-              // onPress={() => router.push(`/(tabs)`)}
-              onDownload={() => {}}
-              onShare={() => {}}
-            />
-          ))}
-        </View>
+            {/* Feed */}
+            <View className="px-4 pb-6">
+              {rest.map((item) => (
+                <MediaCard
+                  key={item.id}
+                  meme={toCardMeme(item)}
+                  variant="feed"
+                  onPress={() => router.push(`/meme/${item.id}`)}
+                  onDownload={() => onDownload(item.id)}
+                  onShare={() => {}}
+                />
+              ))}
+            </View>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

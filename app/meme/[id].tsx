@@ -1,55 +1,36 @@
-import { SafeAreaView } from '@/components/CustomSafeAreaView';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, Image, Pressable, ScrollView, Dimensions, ActivityIndicator, Share } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { useEvent } from 'expo';
 import * as Clipboard from 'expo-clipboard';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useVideoPlayer, VideoView } from 'expo-video';
+import { File, Directory, Paths } from 'expo-file-system';
+import * as MediaLibrary from 'expo-media-library';
 import {
   ArrowLeft,
-  Download,
-  Link2,
-  Maximize,
   MoreHorizontal,
-  Pause,
-  Play,
+  Download,
   Share2,
+  Link2,
+  Play,
+  Pause,
+  Maximize,
   Volume2,
-  VolumeX
+  VolumeX,
+  WifiOff,
 } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { Dimensions, Image, Pressable, ScrollView, Share, Text, View } from 'react-native';
 import { Avatar } from '../../components/Avatar';
-import { BottomSheet, SheetOption } from '../../components/BottomSheet';
 import { PrimaryButton } from '../../components/Buttons';
+import { BottomSheet, SheetOption } from '../../components/BottomSheet';
+import { EmptyState } from '../../components/EmptyState';
+import { useToast } from '../../components/Toast';
+import { fetchMemeById, recordDownload } from '../../lib/api/memes';
+import { formatRelativeTime } from '../../lib/formatRelativeTime';
+import type { ApiMemeDetail } from '../../lib/api/types';
+import { ApiClientError } from '../../lib/apiClient';
 
 const { width } = Dimensions.get('window');
-
-type MemeDetail = {
-  id: string;
-  title: string;
-  mediaType: 'image' | 'video';
-  mediaUrl: string; // image url, or video file url when mediaType === 'video'
-  aspectRatio: number;
-  creatorName: string;
-  creatorAvatar?: string | null;
-  uploadedAt: string;
-};
-
-// Replace with a real fetch-by-id from your API once the backend exists.
-function getMemeById(id: string): MemeDetail {
-  const isVideo = id === '2' || id === 't2' || id === 's2' || id === 's5';
-  return {
-    id,
-    title: isVideo ? 'Trying to explain recursion' : 'When you push directly to production',
-    mediaType: isVideo ? 'video' : 'image',
-    mediaUrl: isVideo
-      ? 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'
-      : `https://picsum.photos/seed/${id}/1000/1250`,
-    aspectRatio: isVideo ? 16 / 9 : 0.8,
-    creatorName: isVideo ? 'otieno.dev' : 'kevin_devops',
-    creatorAvatar: null,
-    uploadedAt: '2 days ago',
-  };
-}
 
 function formatTime(sec: number) {
   if (!isFinite(sec) || sec < 0) return '0:00';
@@ -64,12 +45,11 @@ function VideoPlayerBlock({ uri, aspectRatio }: { uri: string; aspectRatio: numb
   });
 
   const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
-  const { status } = useEvent(player, 'statusChange', { status: player.status });
   const [muted, setMuted] = useState(false);
   const [position, setPosition] = useState(0);
 
   // expo-video exposes currentTime/duration on the player; poll lightly for a simple progress bar.
-  React.useEffect(() => {
+  useEffect(() => {
     const interval = setInterval(() => setPosition(player.currentTime ?? 0), 500);
     return () => clearInterval(interval);
   }, [player]);
@@ -134,11 +114,7 @@ function VideoPlayerBlock({ uri, aspectRatio }: { uri: string; aspectRatio: numb
               {formatTime(position)} / {formatTime(duration)}
             </Text>
           </View>
-          <Pressable
-            onPress={() => VideoView && player.play() /* fullscreen handled via native gesture below */}
-            hitSlop={8}
-            accessibilityLabel="Fullscreen"
-          >
+          <Pressable onPress={() => player.play()} hitSlop={8} accessibilityLabel="Fullscreen">
             <Maximize size={18} color="#F5F5F0" />
           </Pressable>
         </View>
@@ -150,12 +126,36 @@ function VideoPlayerBlock({ uri, aspectRatio }: { uri: string; aspectRatio: numb
 export default function MemeDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const meme = getMemeById(id ?? '1');
+  const { showToast } = useToast();
+
+  const [meme, setMeme] = useState<ApiMemeDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const mediaHeight = width / meme.aspectRatio;
-  const shareUrl = `https://memedrop.app/meme/${meme.id}`;
+  const load = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await fetchMemeById(id);
+      setMeme(result);
+    } catch (e) {
+      setError(e instanceof ApiClientError ? e.message : 'Couldn\u2019t load this meme.');
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const aspectRatio = meme?.width && meme?.height ? meme.width / meme.height : 0.8;
+  const mediaHeight = width / aspectRatio;
+  const shareUrl = meme ? `https://memedrop.app/meme/${meme.id}` : '';
 
   const onShare = async () => {
     try {
@@ -169,9 +169,62 @@ export default function MemeDetailsScreen() {
     setTimeout(() => setCopied(false), 1800);
   };
 
-  const onDownload = () => {
-    // TODO: wire to expo-file-system / MediaLibrary download of the Cloudinary asset
+  const onDownload = async () => {
+    if (!meme || downloading) return;
+    setDownloading(true);
+    try {
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        showToast({ message: 'Allow photo library access to save downloads.', variant: 'error' });
+        return;
+      }
+
+      // New expo-file-system class-based API (SDK 54+) — the old
+      // FileSystem.cacheDirectory / downloadAsync statics are deprecated
+      // and throw at runtime; File.downloadFileAsync + Directory replace them.
+      const downloadsDir = new Directory(Paths.cache, 'memedrop-downloads');
+      if (!downloadsDir.exists) downloadsDir.create();
+
+      const output = await File.downloadFileAsync(meme.mediaUrl, downloadsDir);
+      await MediaLibrary.saveToLibraryAsync(output.uri);
+
+      // Fire-and-forget — a failed counter bump shouldn't block "your download succeeded".
+      recordDownload(meme.id).catch(() => {});
+
+      showToast({ message: 'Saved to your gallery', variant: 'success' });
+    } catch {
+      showToast({ message: 'Couldn\u2019t download this meme. Check your connection and try again.', variant: 'error' });
+    } finally {
+      setDownloading(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView edges={['top']} className="flex-1 bg-bg items-center justify-center">
+        <ActivityIndicator color="#8B5CF6" />
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !meme) {
+    return (
+      <SafeAreaView edges={['top']} className="flex-1 bg-bg">
+        <View className="flex-row items-center px-4 pt-2 pb-3">
+          <Pressable onPress={() => router.back()} hitSlop={8} accessibilityLabel="Go back">
+            <ArrowLeft size={22} color="#F5F5F0" />
+          </Pressable>
+        </View>
+        <EmptyState
+          icon={WifiOff}
+          title="Couldn't load this meme"
+          subtitle={error ?? 'It may have been removed.'}
+          actionLabel="Try Again"
+          onAction={load}
+        />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView edges={['top']} className="flex-1 bg-bg">
@@ -179,7 +232,7 @@ export default function MemeDetailsScreen() {
         {/* Media */}
         <View>
           {meme.mediaType === 'video' ? (
-            <VideoPlayerBlock uri={meme.mediaUrl} aspectRatio={meme.aspectRatio} />
+            <VideoPlayerBlock uri={meme.mediaUrl} aspectRatio={aspectRatio} />
           ) : (
             <Image
               source={{ uri: meme.mediaUrl }}
@@ -211,25 +264,28 @@ export default function MemeDetailsScreen() {
 
         {/* Info */}
         <View className="px-4 pt-5">
-          <Text className="text-text-primary text-xl font-bold mb-3">{meme.title}</Text>
+          <Text className="text-text-primary text-xl font-bold mb-1">{meme.title}</Text>
+          {!!meme.description && (
+            <Text className="text-text-secondary text-sm leading-5 mb-3">{meme.description}</Text>
+          )}
           <Pressable
-            onPress={() => router.push(`/creator/${meme.creatorName}`)}
-            // onPress={() => router.push(`/(tabs)`)}
-            className="flex-row items-center mb-5"
-            accessibilityLabel={`View @${meme.creatorName}'s profile`}
+            onPress={() => router.push(`/creator/${meme.uploader.username}`)}
+            className="flex-row items-center mb-5 mt-2"
+            accessibilityLabel={`View @${meme.uploader.username}'s profile`}
           >
-            <Avatar uri={meme.creatorAvatar} name={meme.creatorName} size="sm" />
+            <Avatar uri={meme.uploader.avatarUrl} name={meme.uploader.username} size="sm" />
             <View className="ml-2.5">
-              <Text className="text-text-primary text-sm font-semibold">Uploaded by @{meme.creatorName}</Text>
-              <Text className="text-text-muted text-xs mt-0.5">{meme.uploadedAt}</Text>
+              <Text className="text-text-primary text-sm font-semibold">Uploaded by @{meme.uploader.username}</Text>
+              <Text className="text-text-muted text-xs mt-0.5">{formatRelativeTime(meme.createdAt)}</Text>
             </View>
           </Pressable>
 
           {/* Actions */}
           <PrimaryButton
-            label="Download"
+            label={downloading ? 'Saving…' : 'Download'}
             icon={<Download size={18} color="#F5F5F0" />}
             onPress={onDownload}
+            loading={downloading}
             className="mb-3"
           />
           <View className="flex-row" style={{ gap: 12 }}>

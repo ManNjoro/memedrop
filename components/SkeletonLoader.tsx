@@ -53,3 +53,26 @@ export function SkeletonGrid({ count = 6 }: { count?: number }) {
     </View>
   );
 }
+
+/** One full-width skeleton card matching MediaCard's feed variant, for Home. */
+export function SkeletonFeedCard() {
+  const cardWidth = width - 16 * 2;
+  return (
+    <View style={{ width: cardWidth }} className="mb-4">
+      <Pulse style={{ width: cardWidth, height: cardWidth / 1.1, borderRadius: 14 }} />
+      <Pulse style={{ width: cardWidth * 0.6, height: 14, borderRadius: 4, marginTop: 8 }} />
+      <Pulse style={{ width: cardWidth * 0.35, height: 11, borderRadius: 4, marginTop: 6 }} />
+    </View>
+  );
+}
+
+/** Stack of full-width skeleton cards, for Home's feed while it loads. */
+export function SkeletonFeedList({ count = 3 }: { count?: number }) {
+  return (
+    <>
+      {Array.from({ length: count }).map((_, i) => (
+        <SkeletonFeedCard key={i} />
+      ))}
+    </>
+  );
+}
