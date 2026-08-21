@@ -1,3 +1,5 @@
+// lib/cloudinaryUpload.ts
+
 export type UploadSignature = {
   signature: string;
   timestamp: number;
@@ -52,7 +54,18 @@ export function uploadToCloudinary(
 
     xhr.onload = () => {
       if (xhr.status < 200 || xhr.status >= 300) {
-        reject(new Error(`Cloudinary upload failed (${xhr.status}).`));
+        // Cloudinary's error responses are JSON like { "error": { "message": "..." } }
+        // — surface that instead of just the status code, since "invalid
+        // signature", "resource too large", "invalid api_key", etc. are all
+        // 4xx and indistinguishable without the body text.
+        let detail = xhr.responseText;
+        try {
+          const parsed = JSON.parse(xhr.responseText);
+          detail = parsed?.error?.message ?? xhr.responseText;
+        } catch {
+          // responseText wasn't JSON — fall back to the raw text as-is.
+        }
+        reject(new Error(`Cloudinary upload failed (${xhr.status}): ${detail}`));
         return;
       }
       try {
@@ -68,7 +81,8 @@ export function uploadToCloudinary(
       }
     };
 
-    xhr.onerror = () => reject(new Error('Network error while uploading.'));
+    xhr.onerror = () =>
+      reject(new Error('Network error while uploading — check the device has internet access and can reach Cloudinary.'));
     xhr.ontimeout = () => reject(new Error('Upload timed out.'));
 
     const formData = new FormData();

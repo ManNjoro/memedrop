@@ -1,15 +1,15 @@
-import { useAuth } from '@clerk/expo';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { AlertTriangle, ArrowLeft, PartyPopper, Plus } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from '@/components/CustomSafeAreaView';
+import { useAuth } from '@clerk/expo';
+import { AlertTriangle, ArrowLeft, PartyPopper, Plus } from 'lucide-react-native';
 import { PrimaryButton } from '../../components/Buttons';
 import { TagChip } from '../../components/Chips';
 import { UploadProgress } from '../../components/UploadProgress';
-import { ApiClientError, apiFetch } from '../../lib/apiClient';
+import { apiFetch } from '../../lib/apiClient';
 import { buildVideoThumbnailUrl, guessMimeType, uploadToCloudinary, type UploadSignature } from '../../lib/cloudinaryUpload';
 import { fieldErrorsFrom, uploadDetailsSchema } from '../../lib/validation/uploadSchema';
-import { SafeAreaView } from '@/components/CustomSafeAreaView';
 
 type Stage = 'form' | 'uploading' | 'success' | 'error';
 type FieldErrors = Partial<Record<'title' | 'description' | 'tags', string>>;
@@ -69,13 +69,11 @@ export default function UploadDetailsScreen() {
       // 2. Upload the file straight to Cloudinary — never through our server.
       setProgressLabel('Uploading…');
       const mimeType = guessMimeType(uri, type);
-      console.log('mimeType:',mimeType)
       const cloudinaryResult = await uploadToCloudinary(uri, sig, mimeType, (fraction) => {
         // Reserve the last slice of the bar for the metadata save below,
         // so the bar doesn't sit at 100% while we're still waiting on Neon.
         setProgress(fraction * 0.9);
       });
-      console.log("cloudinaryResult", cloudinaryResult)
 
       // 3. Persist the metadata to Neon.
       setProgressLabel('Finishing up…');
@@ -101,8 +99,16 @@ export default function UploadDetailsScreen() {
       setNewMemeId(meme.id);
       setStage('success');
     } catch (e) {
+      // Surface the real error rather than a generic fallback whenever we
+      // actually have one — this was the bug: only ApiClientError (thrown
+      // by apiFetch, i.e. failures talking to our own backend) got its
+      // message shown; a failure in uploadToCloudinary throws a plain
+      // Error, which fell through to a fallback string that hid exactly
+      // what went wrong (invalid signature, wrong cloud name, file too
+      // large, network unreachable, etc.).
+      console.error('Upload failed:', e);
       const message =
-        e instanceof ApiClientError
+        e instanceof Error
           ? e.message
           : 'That meme didn\u2019t make it. Check your connection and try again.';
       setErrorMessage(message);
