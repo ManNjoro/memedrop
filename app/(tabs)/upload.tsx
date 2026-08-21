@@ -10,8 +10,8 @@ import { useAuth } from "@clerk/expo";
 import { SafeAreaView } from "@/components/CustomSafeAreaView";
 
 const MAX_IMAGE_MB = 10;
-const MAX_VIDEO_MB = 50;
-const MAX_VIDEO_SECONDS = 60;
+const MAX_VIDEO_MB = 30;
+const MAX_VIDEO_SECONDS = 10 * 60;
 
 export default function UploadScreen() {
   const router = useRouter();

@@ -1,6 +1,6 @@
 import { SafeAreaView } from "@/components/CustomSafeAreaView";
 import { useAuth, useSignIn } from "@clerk/expo";
-import { Link, useRouter, type Href } from "expo-router";
+import { Link } from "expo-router";
 import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -13,12 +13,12 @@ import {
 import { AuthInput } from "../../components/AuthInput";
 import { PrimaryButton } from "../../components/Buttons";
 import { signInSchema, fieldErrorsFrom } from "../../lib/validation/authSchemas";
+import { syncUser } from "../../lib/api/users";
 
 type FieldErrors = Partial<Record<"identifier" | "password", string>>;
 
 export default function SignInScreen() {
-  const router = useRouter();
-  const { isLoaded } = useAuth();
+  const { isLoaded, getToken } = useAuth();
   const { signIn } = useSignIn();
 
   // "identifier" because this Clerk instance accepts both email and username at sign-in.
@@ -53,14 +53,27 @@ export default function SignInScreen() {
         return;
       }
       if (signIn.status === "complete") {
-        await signIn.finalize({
-          navigate: ({ session, decorateUrl }) => {
-            // If this account has a pending session task (e.g. org selection),
-            // let Clerk's session-task layer handle it instead of redirecting.
-            if (session?.currentTask) return;
-            router.replace(decorateUrl("/(tabs)") as Href);
-          },
-        });
+        await signIn.finalize();
+
+        // No manual navigation here on purpose — see the matching comment
+        // in sign-up.tsx: Stack.Protected in app/_layout.tsx handles the
+        // (auth) → (tabs) swap automatically once isSignedIn flips true,
+        // and an imperative router.replace() here races that and throws
+        // "not handled by any navigator". One trade-off worth knowing: this
+        // also drops the old session?.currentTask check (Clerk's pending-task
+        // flow, e.g. org selection) that only the navigate callback exposed.
+        // Not a concern for this app since organizations aren't in use here —
+        // if you add them later, this is the place to reintroduce that check.
+
+        // Cheap, idempotent safety net — covers the rare case where the
+        // Clerk webhook never created this user's Neon row (misconfigured
+        // endpoint, a retry that got dropped, etc.). Non-fatal on failure.
+        try {
+          const token = await getToken();
+          await syncUser(token);
+        } catch {
+          // swallow — see comment above
+        }
       } else {
         setFormError("Additional verification is required for this account.");
       }

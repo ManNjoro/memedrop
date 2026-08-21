@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
-import { Link, useRouter, type Href } from 'expo-router';
+import { Link } from 'expo-router';
 import { useAuth, useSignUp } from '@clerk/expo';
 import { AuthInput } from '../../components/AuthInput';
 import { PrimaryButton } from '../../components/Buttons';
 import { SafeAreaView } from '@/components/CustomSafeAreaView';
 import { signUpSchema, verifyCodeSchema, fieldErrorsFrom } from '../../lib/validation/authSchemas';
+import { syncUser } from '../../lib/api/users';
 
 type SignUpFieldErrors = Partial<Record<'username' | 'email' | 'password', string>>;
 type VerifyFieldErrors = Partial<Record<'code', string>>;
 
 export default function SignUpScreen() {
-  const router = useRouter();
-  const { isLoaded } = useAuth();
+  const { isLoaded, getToken } = useAuth();
   const { signUp } = useSignUp();
 
   const [username, setUsername] = useState('');
@@ -79,12 +79,29 @@ export default function SignUpScreen() {
         setFormError(verifyError.message ?? 'That code didn\u2019t work. Double-check and try again.');
         return;
       }
-      await signUp.finalize({
-        navigate: ({ session, decorateUrl }) => {
-          if (session?.currentTask) return;
-          router.replace(decorateUrl('/(tabs)') as Href);
-        },
-      });
+      await signUp.finalize();
+
+      // No manual navigation here on purpose: Stack.Protected in
+      // app/_layout.tsx reacts to isSignedIn flipping true and
+      // automatically swaps away from the (auth) group to (tabs) — it's
+      // the "next available" sibling screen per Expo Router's protected-
+      // routes docs. Calling router.replace('/(tabs)') ourselves races
+      // that automatic swap: by the time our call fires, the navigator is
+      // often already mid-transition, which is what throws "The action
+      // 'REPLACE' ... was not handled by any navigator. Do you have a
+      // route named '(tabs)'?" — Clerk's own guide confirms `navigate` is
+      // optional for exactly this reason when using Stack.Protected.
+
+      // The webhook will eventually create this user's Neon row too, but
+      // it's async and can lag — sync explicitly here so the row exists
+      // the instant they land on their own Profile tab. Non-fatal: if this
+      // fails, the webhook is the fallback.
+      try {
+        const token = await getToken();
+        await syncUser(token);
+      } catch {
+        // swallow — see comment above
+      }
     } catch (e: any) {
       setFormError('Verification failed. Try again.');
     } finally {
