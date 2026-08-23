@@ -8,7 +8,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "build:preview": "eas build --platform android --profile preview"
   },
   "dependencies": {
     "@clerk/expo": "^4.2.8",
