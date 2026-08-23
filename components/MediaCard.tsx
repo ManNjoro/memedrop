@@ -75,8 +75,8 @@ export function MediaCard({ meme, variant = 'grid', onPress, onDownload, onShare
             <Pressable
               onPress={onShare}
               hitSlop={8}
-              accessibilityLabel="Share meme"
-              className="w-8 h-8 rounded-full bg-black/50 items-center justify-center mr-1.5"
+              accessibilityLabel="Share meme" //bg-black/50
+              className="w-8 h-8 rounded-full bg-primary items-center justify-center mr-1.5"
             >
               <Share2 size={14} color="#F5F5F0" />
             </Pressable>
@@ -86,7 +86,7 @@ export function MediaCard({ meme, variant = 'grid', onPress, onDownload, onShare
               onPress={onDownload}
               hitSlop={8}
               accessibilityLabel="Download meme"
-              className="w-8 h-8 rounded-full bg-black/50 items-center justify-center"
+              className="w-8 h-8 rounded-full bg-primary items-center justify-center"
             >
               <Download size={14} color="#F5F5F0" />
             </Pressable>
