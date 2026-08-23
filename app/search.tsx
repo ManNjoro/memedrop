@@ -1,9 +1,7 @@
-// app/search.tsx
-// Stack screen (not a tab) — pushed from Explore's search bar and category chips.
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from '@/components/CustomSafeAreaView';
 import { ArrowLeft, ChevronDown, SearchX, WifiOff } from 'lucide-react-native';
 import { SearchBar } from '../components/SearchBar';
 import { FilterChip } from '../components/Chips';

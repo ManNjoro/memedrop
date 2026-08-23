@@ -54,20 +54,6 @@ export default function SignInScreen() {
       }
       if (signIn.status === "complete") {
         await signIn.finalize();
-
-        // No manual navigation here on purpose — see the matching comment
-        // in sign-up.tsx: Stack.Protected in app/_layout.tsx handles the
-        // (auth) → (tabs) swap automatically once isSignedIn flips true,
-        // and an imperative router.replace() here races that and throws
-        // "not handled by any navigator". One trade-off worth knowing: this
-        // also drops the old session?.currentTask check (Clerk's pending-task
-        // flow, e.g. org selection) that only the navigate callback exposed.
-        // Not a concern for this app since organizations aren't in use here —
-        // if you add them later, this is the place to reintroduce that check.
-
-        // Cheap, idempotent safety net — covers the rare case where the
-        // Clerk webhook never created this user's Neon row (misconfigured
-        // endpoint, a retry that got dropped, etc.). Non-fatal on failure.
         try {
           const token = await getToken();
           await syncUser(token);

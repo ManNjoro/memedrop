@@ -1,15 +1,16 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { View, Text, TextInput, Image, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from '@/components/CustomSafeAreaView';
 import { useAuth } from '@clerk/expo';
-import { AlertTriangle, ArrowLeft, PartyPopper, Plus } from 'lucide-react-native';
-import { PrimaryButton } from '../../components/Buttons';
+import { ArrowLeft, Plus, PartyPopper, AlertTriangle } from 'lucide-react-native';
 import { TagChip } from '../../components/Chips';
+import { PrimaryButton } from '../../components/Buttons';
 import { UploadProgress } from '../../components/UploadProgress';
 import { apiFetch } from '../../lib/apiClient';
-import { buildVideoThumbnailUrl, guessMimeType, uploadToCloudinary, type UploadSignature } from '../../lib/cloudinaryUpload';
-import { fieldErrorsFrom, uploadDetailsSchema } from '../../lib/validation/uploadSchema';
+import { fetchUploadSignature, cleanupOrphanedUpload } from '../../lib/api/upload';
+import { guessMimeType, uploadToCloudinary, buildVideoThumbnailUrl } from '../../lib/cloudinaryUpload';
+import { uploadDetailsSchema, fieldErrorsFrom } from '../../lib/validation/uploadSchema';
 
 type Stage = 'form' | 'uploading' | 'success' | 'error';
 type FieldErrors = Partial<Record<'title' | 'description' | 'tags', string>>;
@@ -56,15 +57,19 @@ export default function UploadDetailsScreen() {
     setProgress(0);
 
     try {
-      const token = await getToken();
+      // A fresh token is fetched right before each authenticated call below
+      // rather than once up front — Clerk session tokens are short-lived
+      // (default ~60s), and a large video upload can easily take longer
+      // than that. Reusing one token across the whole flow was exactly what
+      // caused "Authentication required" on the final save: the token was
+      // still valid when the Cloudinary upload started, but had expired by
+      // the time we got around to POST /api/memes. getToken() is cheap —
+      // Clerk returns the cached token if it's still valid and silently
+      // refreshes it if not, so calling it multiple times costs nothing.
 
       // 1. Ask our API for a signed Cloudinary upload payload.
       setProgressLabel('Preparing upload…');
-      const sig = await apiFetch<UploadSignature>('/api/upload/signature', {
-        method: 'POST',
-        token,
-        body: { mediaType: type },
-      });
+      const sig = await fetchUploadSignature(type, await getToken());
 
       // 2. Upload the file straight to Cloudinary — never through our server.
       setProgressLabel('Uploading…');
@@ -77,23 +82,37 @@ export default function UploadDetailsScreen() {
 
       // 3. Persist the metadata to Neon.
       setProgressLabel('Finishing up…');
-      const meme = await apiFetch<{ id: string }>('/api/memes', {
-        method: 'POST',
-        token,
-        body: {
-          title: result.data.title,
-          description: result.data.description || undefined,
-          tags: result.data.tags,
-          mediaType: type,
-          cloudinaryPublicId: sig.publicId,
-          mediaUrl: cloudinaryResult.secureUrl,
-          thumbnailUrl: type === 'video' ? buildVideoThumbnailUrl(cloudinaryResult.secureUrl) : undefined,
-          durationSec:
-            type === 'video' ? (cloudinaryResult.durationSec ?? Number(durationSecParam)) || undefined : undefined,
-          width: cloudinaryResult.width,
-          height: cloudinaryResult.height,
-        },
-      });
+      let meme: { id: string };
+      try {
+        meme = await apiFetch<{ id: string }>('/api/memes', {
+          method: 'POST',
+          token: await getToken(),
+          body: {
+            title: result.data.title,
+            description: result.data.description || undefined,
+            tags: result.data.tags,
+            mediaType: type,
+            cloudinaryPublicId: sig.publicId,
+            mediaUrl: cloudinaryResult.secureUrl,
+            thumbnailUrl: type === 'video' ? buildVideoThumbnailUrl(cloudinaryResult.secureUrl) : undefined,
+            durationSec:
+              type === 'video' ? (cloudinaryResult.durationSec ?? Number(durationSecParam)) || undefined : undefined,
+            width: cloudinaryResult.width,
+            height: cloudinaryResult.height,
+          },
+        });
+      } catch (saveError) {
+        // The file is already sitting in Cloudinary at this point, but Neon
+        // never got a row for it — clean up the orphan rather than leaving
+        // it billed against storage with nothing in the app pointing to it.
+        // Best-effort: if the cleanup call itself fails (e.g. the same
+        // expired-token issue), that's logged but shouldn't block showing
+        // the person their actual upload error below.
+        cleanupOrphanedUpload(sig.publicId, type, await getToken()).catch((cleanupError) => {
+          console.error('Failed to clean up orphaned Cloudinary upload:', cleanupError);
+        });
+        throw saveError;
+      }
 
       setProgress(1);
       setNewMemeId(meme.id);

@@ -1,34 +1,39 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Image, Pressable, ScrollView, Dimensions, ActivityIndicator, Share } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from '@/components/CustomSafeAreaView';
-import { useVideoPlayer, VideoView } from 'expo-video';
+import { useAuth } from '@clerk/expo';
+import Slider from '@react-native-community/slider';
 import { useEvent } from 'expo';
 import * as Clipboard from 'expo-clipboard';
-import { File, Directory, Paths } from 'expo-file-system';
+import { Directory, File, Paths } from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import {
   ArrowLeft,
-  MoreHorizontal,
   Download,
-  Share2,
   Link2,
-  Play,
-  Pause,
   Maximize,
+  Minimize,
+  MoreHorizontal,
+  Pause,
+  Play,
+  Share2,
+  Trash2,
   Volume2,
   VolumeX,
   WifiOff,
 } from 'lucide-react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Dimensions, Image, Pressable, ScrollView, Share, Text, View } from 'react-native';
 import { Avatar } from '../../components/Avatar';
-import { PrimaryButton } from '../../components/Buttons';
 import { BottomSheet, SheetOption } from '../../components/BottomSheet';
+import { PrimaryButton } from '../../components/Buttons';
+import { ConfirmationModal } from '../../components/ConfirmationModal';
 import { EmptyState } from '../../components/EmptyState';
 import { useToast } from '../../components/Toast';
-import { fetchMemeById, recordDownload } from '../../lib/api/memes';
-import { formatRelativeTime } from '../../lib/formatRelativeTime';
+import { deleteMeme, fetchMemeById, recordDownload } from '../../lib/api/memes';
 import type { ApiMemeDetail } from '../../lib/api/types';
 import { ApiClientError } from '../../lib/apiClient';
+import { formatRelativeTime } from '../../lib/formatRelativeTime';
 
 const { width } = Dimensions.get('window');
 
@@ -43,28 +48,63 @@ function VideoPlayerBlock({ uri, aspectRatio }: { uri: string; aspectRatio: numb
   const player = useVideoPlayer(uri, (p) => {
     p.loop = false;
   });
+  const videoViewRef = useRef<VideoView>(null);
 
   const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
   const [muted, setMuted] = useState(false);
   const [position, setPosition] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  // While the person is dragging the slider, stop the polling interval from
+  // overwriting their in-progress drag position every 500ms.
+  const seekingRef = useRef(false);
 
-  // expo-video exposes currentTime/duration on the player; poll lightly for a simple progress bar.
   useEffect(() => {
-    const interval = setInterval(() => setPosition(player.currentTime ?? 0), 500);
+    const interval = setInterval(() => {
+      if (!seekingRef.current) setPosition(player.currentTime ?? 0);
+    }, 500);
     return () => clearInterval(interval);
   }, [player]);
 
   const duration = player.duration ?? 0;
-  const progress = duration > 0 ? Math.min(position / duration, 1) : 0;
   const mediaHeight = width / aspectRatio;
+
+  const onSeekStart = () => {
+    seekingRef.current = true;
+  };
+
+  const onSeekComplete = (value: number) => {
+    player.currentTime = value;
+    setPosition(value);
+    seekingRef.current = false;
+  };
+
+  const toggleFullscreen = async () => {
+    try {
+      if (isFullscreen) {
+        await videoViewRef.current?.exitFullscreen();
+      } else {
+        await videoViewRef.current?.enterFullscreen();
+      }
+    } catch {
+      // exitFullscreen() is known to throw on some Android versions
+      // (expo/expo#41833) — the native fullscreen UI still has its own
+      // close affordance in that case, so this is safe to swallow.
+    }
+  };
 
   return (
     <View style={{ width, height: mediaHeight }} className="bg-black">
       <VideoView
+        ref={videoViewRef}
         style={{ width, height: mediaHeight }}
         player={player}
         nativeControls={false}
         contentFit="contain"
+        fullscreenOptions={{
+          enable: true
+        }}
+        onFullscreenEnter={() => setIsFullscreen(true)}
+        onFullscreenExit={() => setIsFullscreen(false)}
       />
 
       {/* Tap-to-toggle play/pause overlay */}
@@ -81,11 +121,21 @@ function VideoPlayerBlock({ uri, aspectRatio }: { uri: string; aspectRatio: numb
       </Pressable>
 
       {/* Bottom controls bar */}
-      <View className="absolute bottom-0 left-0 right-0 px-3 pb-3 pt-6 bg-black/40">
-        <View className="h-1 rounded-full bg-white/25 mb-2 overflow-hidden">
-          <View style={{ width: `${progress * 100}%` }} className="h-1 bg-primary rounded-full" />
-        </View>
-        <View className="flex-row items-center justify-between">
+      <View className="absolute bottom-0 left-0 right-0 px-3 pb-1 pt-6 bg-black/40">
+        <Slider
+          style={{ width: '100%', height: 28 }}
+          minimumValue={0}
+          maximumValue={duration > 0 ? duration : 1}
+          value={position}
+          minimumTrackTintColor="#8B5CF6"
+          maximumTrackTintColor="rgba(255,255,255,0.25)"
+          thumbTintColor="#8B5CF6"
+          onSlidingStart={onSeekStart}
+          onValueChange={setPosition}
+          onSlidingComplete={onSeekComplete}
+          accessibilityLabel="Seek video position"
+        />
+        <View className="flex-row items-center justify-between -mt-1 pb-2">
           <View className="flex-row items-center">
             <Pressable
               onPress={() => (isPlaying ? player.pause() : player.play())}
@@ -114,8 +164,16 @@ function VideoPlayerBlock({ uri, aspectRatio }: { uri: string; aspectRatio: numb
               {formatTime(position)} / {formatTime(duration)}
             </Text>
           </View>
-          <Pressable onPress={() => player.play()} hitSlop={8} accessibilityLabel="Fullscreen">
-            <Maximize size={18} color="#F5F5F0" />
+          <Pressable
+            onPress={toggleFullscreen}
+            hitSlop={8}
+            accessibilityLabel={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+          >
+            {isFullscreen ? (
+              <Minimize size={18} color="#F5F5F0" />
+            ) : (
+              <Maximize size={18} color="#F5F5F0" />
+            )}
           </Pressable>
         </View>
       </View>
@@ -126,6 +184,7 @@ function VideoPlayerBlock({ uri, aspectRatio }: { uri: string; aspectRatio: numb
 export default function MemeDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { userId, getToken } = useAuth();
   const { showToast } = useToast();
 
   const [meme, setMeme] = useState<ApiMemeDetail | null>(null);
@@ -134,6 +193,8 @@ export default function MemeDetailsScreen() {
   const [downloading, setDownloading] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -156,6 +217,7 @@ export default function MemeDetailsScreen() {
   const aspectRatio = meme?.width && meme?.height ? meme.width / meme.height : 0.8;
   const mediaHeight = width / aspectRatio;
   const shareUrl = meme ? `https://memedrop.app/meme/${meme.id}` : '';
+  const isOwner = !!meme && !!userId && meme.uploader.id === userId;
 
   const onShare = async () => {
     try {
@@ -179,16 +241,12 @@ export default function MemeDetailsScreen() {
         return;
       }
 
-      // New expo-file-system class-based API (SDK 54+) — the old
-      // FileSystem.cacheDirectory / downloadAsync statics are deprecated
-      // and throw at runtime; File.downloadFileAsync + Directory replace them.
       const downloadsDir = new Directory(Paths.cache, 'memedrop-downloads');
       if (!downloadsDir.exists) downloadsDir.create();
 
       const output = await File.downloadFileAsync(meme.mediaUrl, downloadsDir);
       await MediaLibrary.saveToLibraryAsync(output.uri);
 
-      // Fire-and-forget — a failed counter bump shouldn't block "your download succeeded".
       recordDownload(meme.id).catch(() => {});
 
       showToast({ message: 'Saved to your gallery', variant: 'success' });
@@ -196,6 +254,25 @@ export default function MemeDetailsScreen() {
       showToast({ message: 'Couldn\u2019t download this meme. Check your connection and try again.', variant: 'error' });
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const onConfirmDelete = async () => {
+    if (!meme) return;
+    setDeleting(true);
+    try {
+      const token = await getToken();
+      await deleteMeme(meme.id, token);
+      setConfirmDeleteOpen(false);
+      showToast({ message: 'Meme deleted', variant: 'success' });
+      router.back();
+    } catch (e) {
+      showToast({
+        message: e instanceof ApiClientError ? e.message : 'Couldn\u2019t delete this meme. Try again.',
+        variant: 'error',
+      });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -228,7 +305,7 @@ export default function MemeDetailsScreen() {
 
   return (
     <SafeAreaView edges={['top']} className="flex-1 bg-bg">
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName='pb-12'>
         {/* Media */}
         <View>
           {meme.mediaType === 'video' ? (
@@ -312,6 +389,17 @@ export default function MemeDetailsScreen() {
       </ScrollView>
 
       <BottomSheet visible={moreOpen} onClose={() => setMoreOpen(false)}>
+        {isOwner && (
+          <SheetOption
+            label="Delete meme"
+            destructive
+            icon={<Trash2 size={17} color="#F5484B" />}
+            onPress={() => {
+              setMoreOpen(false);
+              setConfirmDeleteOpen(true);
+            }}
+          />
+        )}
         <SheetOption
           label="Report content"
           onPress={() => {
@@ -325,6 +413,17 @@ export default function MemeDetailsScreen() {
           </Pressable>
         </View>
       </BottomSheet>
+
+      <ConfirmationModal
+        visible={confirmDeleteOpen}
+        title="Delete this meme?"
+        message="This can't be undone — it'll be removed for everyone."
+        confirmLabel={deleting ? 'Deleting…' : 'Delete'}
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={onConfirmDelete}
+        onCancel={() => !deleting && setConfirmDeleteOpen(false)}
+      />
     </SafeAreaView>
   );
 }

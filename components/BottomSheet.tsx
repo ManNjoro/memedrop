@@ -1,4 +1,4 @@
-// components/BottomSheet.tsx
+
 import React from 'react';
 import { Modal, View, Pressable, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,20 +36,29 @@ export function BottomSheet({ visible, onClose, title, children }: BottomSheetPr
 type SheetOptionProps = {
   label: string;
   selected?: boolean;
+  destructive?: boolean;
+  icon?: React.ReactNode;
   onPress: () => void;
 };
 
-export function SheetOption({ label, selected, onPress }: SheetOptionProps) {
+export function SheetOption({ label, selected, destructive, icon, onPress }: SheetOptionProps) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: !!selected }}
-      className={`flex-row items-center justify-between py-4 px-1 border-b border-border ${selected ? '' : ''}`}
+      className="flex-row items-center justify-between py-4 px-1 border-b border-border"
     >
-      <Text className={`text-base ${selected ? 'text-primary font-bold' : 'text-text-primary font-medium'}`}>
-        {label}
-      </Text>
+      <View className="flex-row items-center">
+        {icon}
+        <Text
+          className={`text-base ${icon ? 'ml-2.5' : ''} ${
+            destructive ? 'text-danger font-semibold' : selected ? 'text-primary font-bold' : 'text-text-primary font-medium'
+          }`}
+        >
+          {label}
+        </Text>
+      </View>
       {selected && <View className="w-2.5 h-2.5 rounded-full bg-primary" />}
     </Pressable>
   );

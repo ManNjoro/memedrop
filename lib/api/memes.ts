@@ -31,3 +31,8 @@ export async function fetchMemeById(id: string): Promise<ApiMemeDetail> {
 export async function recordDownload(id: string): Promise<{ downloadsCount: number }> {
   return apiFetch<{ downloadsCount: number }>(`/api/memes/${id}/download`, { method: 'POST' });
 }
+
+/** DELETE /api/memes/:id — auth required, only the uploader can delete their own meme. */
+export async function deleteMeme(id: string, token: string | null): Promise<void> {
+  await apiFetch<void>(`/api/memes/${id}`, { method: 'DELETE', token });
+}
