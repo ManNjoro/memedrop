@@ -119,6 +119,7 @@ export default function UploadScreen() {
         durationSec: String(durationSec ?? ""),
       },
     });
+    onClear();
   };
 
   return (
