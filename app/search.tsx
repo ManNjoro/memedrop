@@ -1,18 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, NativeSyntheticEvent, NativeScrollEvent, useColorScheme } from 'react-native';
+import ThemedSafeAreaView from '@/components/ThemedSafeAreaView';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from '@/components/CustomSafeAreaView';
 import { ArrowLeft, ChevronDown, SearchX, WifiOff } from 'lucide-react-native';
-import { SearchBar } from '../components/SearchBar';
-import { FilterChip } from '../components/Chips';
-import { MediaCard } from '../components/MediaCard';
-import { SkeletonGrid } from '../components/SkeletonLoader';
-import { EmptyState } from '../components/EmptyState';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, Text, useColorScheme, View } from 'react-native';
 import { BottomSheet, SheetOption } from '../components/BottomSheet';
+import { FilterChip } from '../components/Chips';
+import { EmptyState } from '../components/EmptyState';
+import { MediaCard } from '../components/MediaCard';
+import { SearchBar } from '../components/SearchBar';
+import { SkeletonGrid } from '../components/SkeletonLoader';
+import type { ApiMediaType, ApiSort } from '../lib/api/types';
 import { useMemeFeed } from '../lib/hooks/useMemeFeed';
 import { toCardMeme } from '../lib/mappers';
-import type { ApiMediaType, ApiSort } from '../lib/api/types';
-import ThemedSafeAreaView from '@/components/ThemedSafeAreaView';
 
 type MediaFilter = 'all' | 'images' | 'videos';
 type SortOption = 'Newest' | 'Oldest' | 'Most Downloaded' | 'Most Popular';

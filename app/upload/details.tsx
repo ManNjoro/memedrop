@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Image, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Image, ScrollView, Pressable, KeyboardAvoidingView, Platform, useColorScheme } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from '@/components/CustomSafeAreaView';
 import { useAuth } from '@clerk/expo';
@@ -11,6 +11,7 @@ import { apiFetch } from '../../lib/apiClient';
 import { fetchUploadSignature, cleanupOrphanedUpload } from '../../lib/api/upload';
 import { guessMimeType, uploadToCloudinary, buildVideoThumbnailUrl } from '../../lib/cloudinaryUpload';
 import { uploadDetailsSchema, fieldErrorsFrom } from '../../lib/validation/uploadSchema';
+import ThemedSafeAreaView from '@/components/ThemedSafeAreaView';
 
 type Stage = 'form' | 'uploading' | 'success' | 'error';
 type FieldErrors = Partial<Record<'title' | 'description' | 'tags', string>>;
@@ -34,6 +35,10 @@ export default function UploadDetailsScreen() {
   const [progressLabel, setProgressLabel] = useState('Uploading…');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [newMemeId, setNewMemeId] = useState<string | null>(null);
+    const colorScheme = useColorScheme();
+    const isDark = colorScheme === "dark";
+  
+    const iconColor = isDark ? "#F5F5F0" : "#121214";
 
   const addTag = () => {
     const clean = tagInput.trim().replace(/^#/, '').replace(/\s+/g, '');
@@ -57,16 +62,6 @@ export default function UploadDetailsScreen() {
     setProgress(0);
 
     try {
-      // A fresh token is fetched right before each authenticated call below
-      // rather than once up front — Clerk session tokens are short-lived
-      // (default ~60s), and a large video upload can easily take longer
-      // than that. Reusing one token across the whole flow was exactly what
-      // caused "Authentication required" on the final save: the token was
-      // still valid when the Cloudinary upload started, but had expired by
-      // the time we got around to POST /api/memes. getToken() is cheap —
-      // Clerk returns the cached token if it's still valid and silently
-      // refreshes it if not, so calling it multiple times costs nothing.
-
       // 1. Ask our API for a signed Cloudinary upload payload.
       setProgressLabel('Preparing upload…');
       const sig = await fetchUploadSignature(type, await getToken());
@@ -102,12 +97,6 @@ export default function UploadDetailsScreen() {
           },
         });
       } catch (saveError) {
-        // The file is already sitting in Cloudinary at this point, but Neon
-        // never got a row for it — clean up the orphan rather than leaving
-        // it billed against storage with nothing in the app pointing to it.
-        // Best-effort: if the cleanup call itself fails (e.g. the same
-        // expired-token issue), that's logged but shouldn't block showing
-        // the person their actual upload error below.
         cleanupOrphanedUpload(sig.publicId, type, await getToken()).catch((cleanupError) => {
           console.error('Failed to clean up orphaned Cloudinary upload:', cleanupError);
         });
@@ -118,13 +107,6 @@ export default function UploadDetailsScreen() {
       setNewMemeId(meme.id);
       setStage('success');
     } catch (e) {
-      // Surface the real error rather than a generic fallback whenever we
-      // actually have one — this was the bug: only ApiClientError (thrown
-      // by apiFetch, i.e. failures talking to our own backend) got its
-      // message shown; a failure in uploadToCloudinary throws a plain
-      // Error, which fell through to a fallback string that hid exactly
-      // what went wrong (invalid signature, wrong cloud name, file too
-      // large, network unreachable, etc.).
       console.error('Upload failed:', e);
       const message =
         e instanceof Error
@@ -137,7 +119,7 @@ export default function UploadDetailsScreen() {
 
   if (stage === 'uploading') {
     return (
-      <SafeAreaView className="flex-1 bg-bg items-center justify-center px-8">
+      <SafeAreaView className="flex-1 bg-bg-light dark:bg-bg items-center justify-center px-8">
         <Image source={{ uri }} style={{ width: 140, height: 140, borderRadius: 16 }} resizeMode="cover" />
         <View className="w-full mt-8">
           <UploadProgress progress={progress} label={progressLabel} />
@@ -151,11 +133,11 @@ export default function UploadDetailsScreen() {
 
   if (stage === 'error') {
     return (
-      <SafeAreaView className="flex-1 bg-bg items-center justify-center px-8">
+      <SafeAreaView className="flex-1 bg-bg-light dark:bg-bg items-center justify-center px-8">
         <View className="w-20 h-20 rounded-full bg-danger/10 items-center justify-center mb-6">
           <AlertTriangle size={32} color="#F5484B" strokeWidth={1.75} />
         </View>
-        <Text className="text-text-primary text-xl font-extrabold text-center mb-2">
+        <Text className="text-text-primary-light dark:text-text-primary text-xl font-extrabold text-center mb-2">
           Oops. That meme didn&apos;t make it.
         </Text>
         <Text className="text-text-secondary text-sm text-center mb-8 leading-5">{errorMessage}</Text>
@@ -169,11 +151,11 @@ export default function UploadDetailsScreen() {
 
   if (stage === 'success') {
     return (
-      <SafeAreaView className="flex-1 bg-bg items-center justify-center px-8">
+      <SafeAreaView className="flex-1 bg-bg-light dark:bg-bg items-center justify-center px-8">
         <View className="w-20 h-20 rounded-full bg-secondary/15 items-center justify-center mb-6">
           <PartyPopper size={34} color="#B4F42A" />
         </View>
-        <Text className="text-text-primary text-2xl font-extrabold text-center mb-2">
+        <Text className="text-text-primary-light dark:text-text-primary text-2xl font-extrabold text-center mb-2">
           Your meme is live 🎉
         </Text>
         <Text className="text-text-secondary text-sm text-center mb-8">
@@ -192,13 +174,13 @@ export default function UploadDetailsScreen() {
   }
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-bg">
+    <ThemedSafeAreaView>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
         <View className="flex-row items-center px-4 pt-2 pb-3">
           <Pressable onPress={() => router.back()} hitSlop={8} accessibilityLabel="Go back" className="mr-3">
-            <ArrowLeft size={22} color="#F5F5F0" />
+            <ArrowLeft size={22} color={iconColor} />
           </Pressable>
-          <Text className="text-text-primary text-xl font-extrabold">Add details</Text>
+          <Text className="text-text-primary-light dark:text-text-primary text-xl font-extrabold">Add details</Text>
         </View>
 
         <ScrollView className="px-4" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
@@ -221,7 +203,7 @@ export default function UploadDetailsScreen() {
             placeholder="Give your meme a title"
             placeholderTextColor="#6B6B72"
             maxLength={80}
-            className="bg-surface-alt border border-border rounded-lg px-4 py-3.5 text-text-primary text-base mb-1"
+            className="bg-surface-alt-light dark:bg-surface-alt border border-border-light dark:border-border rounded-lg px-4 py-3.5 text-text-primary-light dark:text-text-primary text-base mb-1"
           />
           {!!fieldErrors.title && <Text className="text-danger text-xs mb-2">{fieldErrors.title}</Text>}
           <View className="mb-5" />
@@ -241,7 +223,7 @@ export default function UploadDetailsScreen() {
             numberOfLines={3}
             maxLength={280}
             textAlignVertical="top"
-            className="bg-surface-alt border border-border rounded-lg px-4 py-3.5 text-text-primary text-base mb-1 h-24"
+            className="bg-surface-alt-light dark:bg-surface-alt border border-border-light dark:border-border rounded-lg px-4 py-3.5 text-text-primary text-base mb-1 h-24"
           />
           {!!fieldErrors.description && (
             <Text className="text-danger text-xs mb-2">{fieldErrors.description}</Text>
@@ -249,7 +231,7 @@ export default function UploadDetailsScreen() {
           <View className="mb-4" />
 
           <Text className="text-text-secondary text-xs font-semibold uppercase tracking-wide mb-2">Tags</Text>
-          <View className="flex-row items-center bg-surface-alt border border-border rounded-lg px-4 mb-1">
+          <View className="flex-row items-center bg-surface-alt-light dark:bg-surface-alt border border-border-light dark:border-border rounded-lg px-4 mb-1">
             <TextInput
               value={tagInput}
               onChangeText={setTagInput}
@@ -257,7 +239,7 @@ export default function UploadDetailsScreen() {
               placeholderTextColor="#6B6B72"
               onSubmitEditing={addTag}
               returnKeyType="done"
-              className="flex-1 text-text-primary text-base py-3.5"
+              className="flex-1 text-text-primary-light dark:text-text-primary text-base py-3.5"
             />
             <Pressable onPress={addTag} hitSlop={8} accessibilityLabel="Add tag">
               <Plus size={20} color="#8B5CF6" />
@@ -275,6 +257,6 @@ export default function UploadDetailsScreen() {
           <PrimaryButton label="Drop It 🚀" onPress={onDropIt} disabled={title.trim().length < 3} className="mt-4" />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </ThemedSafeAreaView>
   );
 }
