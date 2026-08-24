@@ -20,10 +20,12 @@ export const posthog = isPostHogConfigured
       host,
       captureAppLifecycleEvents: true,
       errorTracking: {
-        autocapture: {
-          uncaughtExceptions: true,
-          unhandledRejections: true,
-        },
+        autocapture: __DEV__
+          ? false
+          : {
+              uncaughtExceptions: true,
+              unhandledRejections: true,
+            },
       },
     })
   : undefined;
