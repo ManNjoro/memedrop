@@ -56,7 +56,8 @@ export default function EditProfileScreen() {
       const blob = await response.blob();
       await user.setProfileImage({ file: blob });
       showToast({ message: 'Profile photo updated', variant: 'success' });
-    } catch {
+    } catch (err) {
+      console.error(err)
       showToast({ message: 'Couldn\u2019t update your photo. Try again.', variant: 'error' });
       setAvatarUri(null);
     } finally {
