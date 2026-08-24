@@ -25,7 +25,7 @@ export function BottomNav({ state, navigation }: BottomTabBarProps) {
   return (
     <View
       style={{ paddingBottom: Math.max(insets.bottom, 12) }}
-      className="flex-row bg-surface border-t border-border pt-2.5 px-4"
+      className="flex-row bg-surface-light dark:bg-surface border-t border-border-light dark:border-border pt-2.5 px-4"
     >
       {state.routes.map((route, index) => {
         const focused = state.index === index;

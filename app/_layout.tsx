@@ -1,4 +1,3 @@
-// app/_layout.tsx
 import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { ClerkProvider, useAuth } from '@clerk/expo';

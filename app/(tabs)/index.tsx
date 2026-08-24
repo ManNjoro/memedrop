@@ -54,14 +54,14 @@ export default function HomeScreen() {
   const [featured, ...rest] = memes;
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-bg">
+    <SafeAreaView edges={['top']} className="flex-1 bg-bg-light dark:bg-bg">
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#8B5CF6" />}
       >
         {/* Top bar */}
         <View className="flex-row items-center justify-between px-4 pt-2 pb-4">
-          <Text className="text-text-primary text-2xl font-extrabold">
+          <Text className="text-text-primary-light dark:text-text-primary text-2xl font-extrabold">
             Meme<Text className="text-primary">Drop</Text>
           </Text>
           <View className="flex-row items-center">
@@ -69,7 +69,7 @@ export default function HomeScreen() {
               onPress={() => router.push('/search')}
               hitSlop={8}
               accessibilityLabel="Search"
-              className="w-10 h-10 rounded-full bg-surface-alt items-center justify-center mr-3"
+              className="w-10 h-10 rounded-full bg-surface-alt-light dark:bg-surface-alt items-center justify-center mr-3"
             >
               <Search size={20} color="#F5F5F0" />
             </Pressable>
@@ -81,7 +81,7 @@ export default function HomeScreen() {
 
         {/* Hero greeting */}
         <View className="px-4 mb-5">
-          <Text className="text-text-primary text-[26px] font-extrabold leading-8">
+          <Text className="text-text-primary-light dark:text-text-primary text-[26px] font-extrabold leading-8">
             Your daily dose{'\n'}of internet chaos.
           </Text>
         </View>
@@ -121,7 +121,7 @@ export default function HomeScreen() {
             {featured && (
               <Pressable
                 onPress={() => router.push(`/meme/${featured.id}`)}
-                className="mx-4 mb-5 rounded-lg overflow-hidden bg-surface"
+                className="mx-4 mb-5 rounded-lg overflow-hidden bg-surface-light dark:bg-surface"
               >
                 <Image
                   source={{ uri: toCardMeme(featured).mediaUrl }}
