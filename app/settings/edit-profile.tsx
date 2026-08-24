@@ -38,13 +38,17 @@ export default function EditProfileScreen() {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      quality: 0.8,
       allowsEditing: true,
       aspect: [1, 1],
+      quality: 0.5,
+      base64: true, // Clerk accepts base64 files
     });
     if (result.canceled || !result.assets?.[0]) return;
 
     const uri = result.assets[0].uri;
+    const asset = result.assets[0];
+    const base64File = `data:${asset.mimeType};base64,${asset.base64}`;
+
     setAvatarUri(uri); // show the new photo immediately, upload happens on Save
 
     if (!user) return;
@@ -52,9 +56,9 @@ export default function EditProfileScreen() {
     try {
       // @clerk/expo's setProfileImage expects a Blob, not a bare local URI —
       // fetch() against a file:// URI in React Native returns one directly.
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      await user.setProfileImage({ file: blob });
+      // const response = await fetch(uri);
+      // const blob = await response.blob();
+      await user.setProfileImage({ file: base64File });
       showToast({ message: 'Profile photo updated', variant: 'success' });
     } catch (err) {
       console.error(err)
