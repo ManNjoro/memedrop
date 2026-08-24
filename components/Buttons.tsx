@@ -33,7 +33,7 @@ export function PrimaryButton({ label, loading, disabled, icon, className = '', 
         ) : (
           <>
             {icon}
-            <Text className="text-text-primary text-base font-bold ml-1">{label}</Text>
+            <Text className="text-text-primary-light dark:text-text-primary text-base font-bold ml-1">{label}</Text>
           </>
         )}
       </LinearGradient>
@@ -59,7 +59,7 @@ export function SecondaryButton({ label, loading, disabled, icon, className = ''
       ) : (
         <>
           {icon}
-          <Text className="text-text-primary text-base font-semibold ml-1">{label}</Text>
+          <Text className="text-text-primary-light dark:text-text-primary text-base font-semibold ml-1">{label}</Text>
         </>
       )}
     </Pressable>

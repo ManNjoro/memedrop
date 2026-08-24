@@ -1,53 +1,82 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Image, ScrollView, Pressable, KeyboardAvoidingView, Platform, useColorScheme } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { usePostHog } from 'posthog-react-native';
-import { SafeAreaView } from '@/components/CustomSafeAreaView';
-import { useAuth } from '@clerk/expo';
-import { ArrowLeft, Plus, PartyPopper, AlertTriangle } from 'lucide-react-native';
-import { TagChip } from '../../components/Chips';
-import { PrimaryButton } from '../../components/Buttons';
-import { UploadProgress } from '../../components/UploadProgress';
-import { apiFetch } from '../../lib/apiClient';
-import { fetchUploadSignature, cleanupOrphanedUpload } from '../../lib/api/upload';
-import { guessMimeType, uploadToCloudinary, buildVideoThumbnailUrl } from '../../lib/cloudinaryUpload';
-import { uploadDetailsSchema, fieldErrorsFrom } from '../../lib/validation/uploadSchema';
-import ThemedSafeAreaView from '@/components/ThemedSafeAreaView';
+import { SafeAreaView } from "@/components/CustomSafeAreaView";
+import ThemedSafeAreaView from "@/components/ThemedSafeAreaView";
+import { useAuth } from "@clerk/expo";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  PartyPopper,
+  Plus,
+} from "lucide-react-native";
+import { usePostHog } from "posthog-react-native";
+import React, { useState } from "react";
+import {
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  useColorScheme,
+  View,
+} from "react-native";
+import { PrimaryButton } from "../../components/Buttons";
+import { TagChip } from "../../components/Chips";
+import { UploadProgress } from "../../components/UploadProgress";
+import {
+  cleanupOrphanedUpload,
+  fetchUploadSignature,
+} from "../../lib/api/upload";
+import { apiFetch } from "../../lib/apiClient";
+import {
+  buildVideoThumbnailUrl,
+  guessMimeType,
+  uploadToCloudinary,
+} from "../../lib/cloudinaryUpload";
+import {
+  fieldErrorsFrom,
+  uploadDetailsSchema,
+} from "../../lib/validation/uploadSchema";
 
-type Stage = 'form' | 'uploading' | 'success' | 'error';
-type FieldErrors = Partial<Record<'title' | 'description' | 'tags', string>>;
+type Stage = "form" | "uploading" | "success" | "error";
+type FieldErrors = Partial<Record<"title" | "description" | "tags", string>>;
 
 export default function UploadDetailsScreen() {
   const router = useRouter();
   const { getToken } = useAuth();
   const posthog = usePostHog();
-  const { uri, type, durationSec: durationSecParam } = useLocalSearchParams<{
+  const {
+    uri,
+    type,
+    durationSec: durationSecParam,
+  } = useLocalSearchParams<{
     uri: string;
-    type: 'image' | 'video';
+    type: "image" | "video";
     durationSec?: string;
   }>();
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [tagInput, setTagInput] = useState('');
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [stage, setStage] = useState<Stage>('form');
+  const [stage, setStage] = useState<Stage>("form");
   const [progress, setProgress] = useState(0);
-  const [progressLabel, setProgressLabel] = useState('Uploading…');
+  const [progressLabel, setProgressLabel] = useState("Uploading…");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [newMemeId, setNewMemeId] = useState<string | null>(null);
-    const colorScheme = useColorScheme();
-    const isDark = colorScheme === "dark";
-  
-    const iconColor = isDark ? "#F5F5F0" : "#121214";
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
+  const iconColor = isDark ? "#F5F5F0" : "#121214";
 
   const addTag = () => {
-    const clean = tagInput.trim().replace(/^#/, '').replace(/\s+/g, '');
+    const clean = tagInput.trim().replace(/^#/, "").replace(/\s+/g, "");
     if (clean && !tags.includes(clean) && tags.length < 8) {
       setTags([...tags, clean]);
     }
-    setTagInput('');
+    setTagInput("");
   };
 
   const removeTag = (t: string) => setTags(tags.filter((x) => x !== t));
@@ -59,30 +88,35 @@ export default function UploadDetailsScreen() {
       return;
     }
     setFieldErrors({});
-    setStage('uploading');
+    setStage("uploading");
     setErrorMessage(null);
     setProgress(0);
 
     try {
       // 1. Ask our API for a signed Cloudinary upload payload.
-      setProgressLabel('Preparing upload…');
+      setProgressLabel("Preparing upload…");
       const sig = await fetchUploadSignature(type, await getToken());
 
       // 2. Upload the file straight to Cloudinary — never through our server.
-      setProgressLabel('Uploading…');
+      setProgressLabel("Uploading…");
       const mimeType = guessMimeType(uri, type);
-      const cloudinaryResult = await uploadToCloudinary(uri, sig, mimeType, (fraction) => {
-        // Reserve the last slice of the bar for the metadata save below,
-        // so the bar doesn't sit at 100% while we're still waiting on Neon.
-        setProgress(fraction * 0.9);
-      });
+      const cloudinaryResult = await uploadToCloudinary(
+        uri,
+        sig,
+        mimeType,
+        (fraction) => {
+          // Reserve the last slice of the bar for the metadata save below,
+          // so the bar doesn't sit at 100% while we're still waiting on Neon.
+          setProgress(fraction * 0.9);
+        },
+      );
 
       // 3. Persist the metadata to Neon.
-      setProgressLabel('Finishing up…');
+      setProgressLabel("Finishing up…");
       let meme: { id: string };
       try {
-        meme = await apiFetch<{ id: string }>('/api/memes', {
-          method: 'POST',
+        meme = await apiFetch<{ id: string }>("/api/memes", {
+          method: "POST",
           token: await getToken(),
           body: {
             title: result.data.title,
@@ -91,43 +125,58 @@ export default function UploadDetailsScreen() {
             mediaType: type,
             cloudinaryPublicId: sig.publicId,
             mediaUrl: cloudinaryResult.secureUrl,
-            thumbnailUrl: type === 'video' ? buildVideoThumbnailUrl(cloudinaryResult.secureUrl) : undefined,
+            thumbnailUrl:
+              type === "video"
+                ? buildVideoThumbnailUrl(cloudinaryResult.secureUrl)
+                : undefined,
             durationSec:
-              type === 'video' ? (cloudinaryResult.durationSec ?? Number(durationSecParam)) || undefined : undefined,
+              type === "video"
+                ? (cloudinaryResult.durationSec ?? Number(durationSecParam)) ||
+                  undefined
+                : undefined,
             width: cloudinaryResult.width,
             height: cloudinaryResult.height,
           },
         });
       } catch (saveError) {
-        cleanupOrphanedUpload(sig.publicId, type, await getToken()).catch((cleanupError) => {
-          console.error('Failed to clean up orphaned Cloudinary upload:', cleanupError);
-        });
+        cleanupOrphanedUpload(sig.publicId, type, await getToken()).catch(
+          (cleanupError) => {
+            console.error(
+              "Failed to clean up orphaned Cloudinary upload:",
+              cleanupError,
+            );
+          },
+        );
         throw saveError;
       }
 
       setProgress(1);
-      posthog.capture('meme_uploaded', {
+      posthog.capture("meme_uploaded", {
         media_type: type,
         tag_count: result.data.tags.length,
         has_description: Boolean(result.data.description),
       });
       setNewMemeId(meme.id);
-      setStage('success');
+      setStage("success");
     } catch (e) {
-      console.error('Upload failed:', e);
+      console.error("Upload failed:", e);
       const message =
         e instanceof Error
           ? e.message
-          : 'That meme didn\u2019t make it. Check your connection and try again.';
+          : "That meme didn\u2019t make it. Check your connection and try again.";
       setErrorMessage(message);
-      setStage('error');
+      setStage("error");
     }
   };
 
-  if (stage === 'uploading') {
+  if (stage === "uploading") {
     return (
       <SafeAreaView className="flex-1 bg-bg-light dark:bg-bg items-center justify-center px-8">
-        <Image source={{ uri }} style={{ width: 140, height: 140, borderRadius: 16 }} resizeMode="cover" />
+        <Image
+          source={{ uri }}
+          style={{ width: 140, height: 140, borderRadius: 16 }}
+          resizeMode="cover"
+        />
         <View className="w-full mt-8">
           <UploadProgress progress={progress} label={progressLabel} />
         </View>
@@ -138,7 +187,7 @@ export default function UploadDetailsScreen() {
     );
   }
 
-  if (stage === 'error') {
+  if (stage === "error") {
     return (
       <SafeAreaView className="flex-1 bg-bg-light dark:bg-bg items-center justify-center px-8">
         <View className="w-20 h-20 rounded-full bg-danger/10 items-center justify-center mb-6">
@@ -147,16 +196,24 @@ export default function UploadDetailsScreen() {
         <Text className="text-text-primary-light dark:text-text-primary text-xl font-extrabold text-center mb-2">
           Oops. That meme didn&apos;t make it.
         </Text>
-        <Text className="text-text-secondary text-sm text-center mb-8 leading-5">{errorMessage}</Text>
-        <PrimaryButton label="Try Again" onPress={onDropIt} className="w-full mb-3" />
-        <Pressable onPress={() => setStage('form')} className="py-3">
-          <Text className="text-text-secondary text-sm font-semibold">Edit Details</Text>
+        <Text className="text-text-secondary text-sm text-center mb-8 leading-5">
+          {errorMessage}
+        </Text>
+        <PrimaryButton
+          label="Try Again"
+          onPress={onDropIt}
+          className="w-full mb-3"
+        />
+        <Pressable onPress={() => setStage("form")} className="py-3">
+          <Text className="text-text-secondary text-sm font-semibold">
+            Edit Details
+          </Text>
         </Pressable>
       </SafeAreaView>
     );
   }
 
-  if (stage === 'success') {
+  if (stage === "success") {
     return (
       <SafeAreaView className="flex-1 bg-bg-light dark:bg-bg items-center justify-center px-8">
         <View className="w-20 h-20 rounded-full bg-secondary/15 items-center justify-center mb-6">
@@ -173,8 +230,10 @@ export default function UploadDetailsScreen() {
           onPress={() => router.replace(`/meme/${newMemeId}`)}
           className="w-full mb-3"
         />
-        <Pressable onPress={() => router.replace('/(tabs)')} className="py-3">
-          <Text className="text-text-secondary text-sm font-semibold">Back to Home</Text>
+        <Pressable onPress={() => router.replace("/(tabs)")} className="py-3">
+          <Text className="text-text-secondary text-sm font-semibold">
+            Back to Home
+          </Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -182,37 +241,58 @@ export default function UploadDetailsScreen() {
 
   return (
     <ThemedSafeAreaView>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        className="flex-1"
+      >
         <View className="flex-row items-center px-4 pt-2 pb-3">
-          <Pressable onPress={() => router.back()} hitSlop={8} accessibilityLabel="Go back" className="mr-3">
+          <Pressable
+            onPress={() => router.back()}
+            hitSlop={8}
+            accessibilityLabel="Go back"
+            className="mr-3"
+          >
             <ArrowLeft size={22} color={iconColor} />
           </Pressable>
-          <Text className="text-text-primary-light dark:text-text-primary text-xl font-extrabold">Add details</Text>
+          <Text className="text-text-primary-light dark:text-text-primary text-xl font-extrabold">
+            Add details
+          </Text>
         </View>
 
-        <ScrollView className="px-4" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
+        <ScrollView
+          className="px-4"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 32 }}
+        >
           {!!uri && (
             <Image
               source={{ uri }}
-              style={{ width: '100%', height: 200, borderRadius: 14 }}
+              style={{ width: "100%", height: 200, borderRadius: 14 }}
               resizeMode="cover"
               className="mb-6"
             />
           )}
 
-          <Text className="text-text-secondary text-xs font-semibold uppercase tracking-wide mb-2">Title</Text>
+          <Text className="text-text-secondary text-xs font-semibold uppercase tracking-wide mb-2">
+            Title
+          </Text>
           <TextInput
             value={title}
             onChangeText={(v) => {
               setTitle(v);
-              if (fieldErrors.title) setFieldErrors((e) => ({ ...e, title: undefined }));
+              if (fieldErrors.title)
+                setFieldErrors((e) => ({ ...e, title: undefined }));
             }}
             placeholder="Give your meme a title"
             placeholderTextColor="#6B6B72"
             maxLength={80}
             className="bg-surface-alt-light dark:bg-surface-alt border border-border-light dark:border-border rounded-lg px-4 py-3.5 text-text-primary-light dark:text-text-primary text-base mb-1"
           />
-          {!!fieldErrors.title && <Text className="text-danger text-xs mb-2">{fieldErrors.title}</Text>}
+          {!!fieldErrors.title && (
+            <Text className="text-danger text-xs mb-2">
+              {fieldErrors.title}
+            </Text>
+          )}
           <View className="mb-5" />
 
           <Text className="text-text-secondary text-xs font-semibold uppercase tracking-wide mb-2">
@@ -222,7 +302,8 @@ export default function UploadDetailsScreen() {
             value={description}
             onChangeText={(v) => {
               setDescription(v);
-              if (fieldErrors.description) setFieldErrors((e) => ({ ...e, description: undefined }));
+              if (fieldErrors.description)
+                setFieldErrors((e) => ({ ...e, description: undefined }));
             }}
             placeholder="Add some context…"
             placeholderTextColor="#6B6B72"
@@ -233,11 +314,15 @@ export default function UploadDetailsScreen() {
             className="bg-surface-alt-light dark:bg-surface-alt border border-border-light dark:border-border rounded-lg px-4 py-3.5 text-text-primary text-base mb-1 h-24"
           />
           {!!fieldErrors.description && (
-            <Text className="text-danger text-xs mb-2">{fieldErrors.description}</Text>
+            <Text className="text-danger text-xs mb-2">
+              {fieldErrors.description}
+            </Text>
           )}
           <View className="mb-4" />
 
-          <Text className="text-text-secondary text-xs font-semibold uppercase tracking-wide mb-2">Tags</Text>
+          <Text className="text-text-secondary text-xs font-semibold uppercase tracking-wide mb-2">
+            Tags
+          </Text>
           <View className="flex-row items-center bg-surface-alt-light dark:bg-surface-alt border border-border-light dark:border-border rounded-lg px-4 mb-1">
             <TextInput
               value={tagInput}
@@ -248,11 +333,17 @@ export default function UploadDetailsScreen() {
               returnKeyType="done"
               className="flex-1 text-text-primary-light dark:text-text-primary text-base py-3.5"
             />
-            <Pressable onPress={addTag} hitSlop={8} accessibilityLabel="Add tag">
+            <Pressable
+              onPress={addTag}
+              hitSlop={8}
+              accessibilityLabel="Add tag"
+            >
               <Plus size={20} color="#8B5CF6" />
             </Pressable>
           </View>
-          {!!fieldErrors.tags && <Text className="text-danger text-xs mb-2">{fieldErrors.tags}</Text>}
+          {!!fieldErrors.tags && (
+            <Text className="text-danger text-xs mb-2">{fieldErrors.tags}</Text>
+          )}
           {tags.length > 0 && (
             <View className="flex-row flex-wrap mb-2 mt-2">
               {tags.map((t) => (
@@ -261,7 +352,12 @@ export default function UploadDetailsScreen() {
             </View>
           )}
 
-          <PrimaryButton label="Drop It 🚀" onPress={onDropIt} disabled={title.trim().length < 3} className="mt-4" />
+          <PrimaryButton
+            label="Drop It 🚀"
+            onPress={onDropIt}
+            disabled={title.trim().length < 3}
+            className="mt-4"
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </ThemedSafeAreaView>

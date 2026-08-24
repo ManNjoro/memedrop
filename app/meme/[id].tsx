@@ -24,7 +24,7 @@ import {
   WifiOff,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Dimensions, Image, Pressable, ScrollView, Share, Text, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Image, Pressable, ScrollView, Share, Text, useColorScheme, View } from 'react-native';
 import { Avatar } from '../../components/Avatar';
 import { BottomSheet, SheetOption } from '../../components/BottomSheet';
 import { PrimaryButton } from '../../components/Buttons';
@@ -35,6 +35,7 @@ import { deleteMeme, fetchMemeById, recordDownload } from '../../lib/api/memes';
 import type { ApiMemeDetail } from '../../lib/api/types';
 import { ApiClientError } from '../../lib/apiClient';
 import { formatRelativeTime } from '../../lib/formatRelativeTime';
+import ThemedSafeAreaView from '@/components/ThemedSafeAreaView';
 
 const { width } = Dimensions.get('window');
 
@@ -198,6 +199,11 @@ export default function MemeDetailsScreen() {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const colorScheme = useColorScheme();
+    const isDark = colorScheme === "dark";
+  
+    const iconColor = isDark ? "#F5F5F0" : "#121214";
+
   const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
@@ -286,7 +292,7 @@ export default function MemeDetailsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView edges={['top']} className="flex-1 bg-bg items-center justify-center">
+      <SafeAreaView edges={['top']} className="flex-1 bg-bg-light dark:bg-bg items-center justify-center">
         <ActivityIndicator color="#8B5CF6" />
       </SafeAreaView>
     );
@@ -294,10 +300,10 @@ export default function MemeDetailsScreen() {
 
   if (error || !meme) {
     return (
-      <SafeAreaView edges={['top']} className="flex-1 bg-bg">
+      <ThemedSafeAreaView>
         <View className="flex-row items-center px-4 pt-2 pb-3">
           <Pressable onPress={() => router.back()} hitSlop={8} accessibilityLabel="Go back">
-            <ArrowLeft size={22} color="#F5F5F0" />
+            <ArrowLeft size={22} color={iconColor} />
           </Pressable>
         </View>
         <EmptyState
@@ -307,12 +313,12 @@ export default function MemeDetailsScreen() {
           actionLabel="Try Again"
           onAction={load}
         />
-      </SafeAreaView>
+      </ThemedSafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-bg">
+    <ThemedSafeAreaView>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName='pb-12'>
         {/* Media */}
         <View>
@@ -334,7 +340,7 @@ export default function MemeDetailsScreen() {
               accessibilityLabel="Go back"
               className="w-10 h-10 rounded-full bg-black/50 items-center justify-center"
             >
-              <ArrowLeft size={20} color="#F5F5F0" />
+              <ArrowLeft size={20} color={iconColor} />
             </Pressable>
             <Pressable
               onPress={() => setMoreOpen(true)}
@@ -342,16 +348,16 @@ export default function MemeDetailsScreen() {
               accessibilityLabel="More options"
               className="w-10 h-10 rounded-full bg-black/50 items-center justify-center"
             >
-              <MoreHorizontal size={20} color="#F5F5F0" />
+              <MoreHorizontal size={20} color={iconColor} />
             </Pressable>
           </View>
         </View>
 
         {/* Info */}
         <View className="px-4 pt-5">
-          <Text className="text-text-primary text-xl font-bold mb-1">{meme.title}</Text>
+          <Text className="text-text-primary-light dark:text-text-primary text-xl font-bold mb-1">{meme.title}</Text>
           {!!meme.description && (
-            <Text className="text-text-secondary text-sm leading-5 mb-3">{meme.description}</Text>
+            <Text className="text-text-secondary-light dark:text-text-secondary text-sm leading-5 mb-3">{meme.description}</Text>
           )}
           <Pressable
             onPress={() => router.push(`/creator/${meme.uploader.username}`)}
@@ -360,7 +366,7 @@ export default function MemeDetailsScreen() {
           >
             <Avatar uri={meme.uploader.avatarUrl} name={meme.uploader.username} size="sm" />
             <View className="ml-2.5">
-              <Text className="text-text-primary text-sm font-semibold">Uploaded by @{meme.uploader.username}</Text>
+              <Text className="text-text-primary-light dark:text-text-primary text-sm font-semibold">Uploaded by @{meme.uploader.username}</Text>
               <Text className="text-text-muted text-xs mt-0.5">{formatRelativeTime(meme.createdAt)}</Text>
             </View>
           </Pressable>
@@ -368,7 +374,7 @@ export default function MemeDetailsScreen() {
           {/* Actions */}
           <PrimaryButton
             label={downloading ? 'Saving…' : 'Download'}
-            icon={<Download size={18} color="#F5F5F0" />}
+            icon={<Download size={18} color={iconColor} />}
             onPress={onDownload}
             loading={downloading}
             className="mb-3"
@@ -376,19 +382,19 @@ export default function MemeDetailsScreen() {
           <View className="flex-row" style={{ gap: 12 }}>
             <Pressable
               onPress={onShare}
-              className="flex-1 flex-row items-center justify-center py-3.5 rounded-lg bg-surface-alt border border-border"
+              className="flex-1 flex-row items-center justify-center py-3.5 rounded-lg bg-surface-alt-light dark:bg-surface-alt border border-border-light dark:border-border"
               accessibilityLabel="Share meme"
             >
-              <Share2 size={16} color="#F5F5F0" />
-              <Text className="text-text-primary text-sm font-semibold ml-2">Share</Text>
+              <Share2 size={16} color={iconColor} />
+              <Text className="text-text-primary-light dark:text-text-primary text-sm font-semibold ml-2">Share</Text>
             </Pressable>
             <Pressable
               onPress={onCopyLink}
-              className="flex-1 flex-row items-center justify-center py-3.5 rounded-lg bg-surface-alt border border-border"
+              className="flex-1 flex-row items-center justify-center py-3.5 rounded-lg bg-surface-alt-light dark:bg-surface-alt border border-border-light dark:border-border"
               accessibilityLabel="Copy link"
             >
-              <Link2 size={16} color="#F5F5F0" />
-              <Text className="text-text-primary text-sm font-semibold ml-2">
+              <Link2 size={16} color={iconColor} />
+              <Text className="text-text-primary-light dark:text-text-primary text-sm font-semibold ml-2">
                 {copied ? 'Copied!' : 'Copy Link'}
               </Text>
             </Pressable>
@@ -417,7 +423,7 @@ export default function MemeDetailsScreen() {
         />
         <View className="pt-1">
           <Pressable onPress={() => setMoreOpen(false)} className="py-4 items-center">
-            <Text className="text-text-secondary text-base font-semibold">Cancel</Text>
+            <Text className="text-text-secondary-light dark:text-text-secondary text-base font-semibold">Cancel</Text>
           </Pressable>
         </View>
       </BottomSheet>
@@ -432,6 +438,6 @@ export default function MemeDetailsScreen() {
         onConfirm={onConfirmDelete}
         onCancel={() => !deleting && setConfirmDeleteOpen(false)}
       />
-    </SafeAreaView>
+    </ThemedSafeAreaView>
   );
 }

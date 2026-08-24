@@ -69,6 +69,8 @@ export type ApiUserMemeItem = {
 export type ApiUserProfile = {
   id: string;
   username: string;
+  firstName: string | null;
+  lastName: string | null;
   avatarUrl: string | null;
   createdAt: string;
   memeCount: number;

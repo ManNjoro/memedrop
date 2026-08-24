@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
-import { usePostHog } from 'posthog-react-native';
-import { SafeAreaView } from '@/components/CustomSafeAreaView';
+import ThemedSafeAreaView from '@/components/ThemedSafeAreaView';
 import { useUser } from '@clerk/expo';
 import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
 import { ArrowLeft, Camera } from 'lucide-react-native';
+import { usePostHog } from 'posthog-react-native';
+import React, { useState } from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, useColorScheme, View } from 'react-native';
 import { Avatar } from '../../components/Avatar';
 import { PrimaryButton } from '../../components/Buttons';
 import { useToast } from '../../components/Toast';
@@ -21,6 +21,11 @@ export default function EditProfileScreen() {
   const [avatarUri, setAvatarUri] = useState<string | null>(null); // local preview only until saved
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const colorScheme = useColorScheme();
+    const isDark = colorScheme === "dark";
+  
+    const iconColor = isDark ? "#F5F5F0" : "#121214";
 
   const isDirty =
     firstName !== (user?.firstName ?? '') || lastName !== (user?.lastName ?? '') || avatarUri !== null;
@@ -75,21 +80,21 @@ export default function EditProfileScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-bg">
+    <ThemedSafeAreaView>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
         <View className="flex-row items-center px-4 pt-2 pb-3">
           <Pressable onPress={() => router.back()} hitSlop={8} accessibilityLabel="Go back" className="mr-3">
-            <ArrowLeft size={22} color="#F5F5F0" />
+            <ArrowLeft size={22} color={iconColor} />
           </Pressable>
-          <Text className="text-text-primary text-xl font-extrabold">Edit Profile</Text>
+          <Text className="text-text-primary-light dark:text-text-primary text-xl font-extrabold">Edit Profile</Text>
         </View>
 
         <ScrollView className="px-4" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
           <View className="items-center py-6">
             <Pressable onPress={onChangeAvatar} disabled={uploadingAvatar} accessibilityLabel="Change profile photo">
               <Avatar uri={avatarUri ?? user?.imageUrl} name={user?.username ?? 'you'} size="lg" />
-              <View className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-primary items-center justify-center border-2 border-bg">
-                <Camera size={13} color="#F5F5F0" />
+              <View className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-primary items-center justify-center border-2 border-bg-light dark:border-bg">
+                <Camera size={13} color={iconColor} />
               </View>
             </Pressable>
             <Text className="text-text-muted text-xs mt-3">
@@ -97,7 +102,7 @@ export default function EditProfileScreen() {
             </Text>
           </View>
 
-          <Text className="text-text-secondary text-xs font-semibold uppercase tracking-wide mb-2">
+          <Text className="text-text-secondary-light dark:text-text-secondary text-xs font-semibold uppercase tracking-wide mb-2">
             First name
           </Text>
           <TextInput
@@ -106,10 +111,10 @@ export default function EditProfileScreen() {
             placeholder="First name"
             placeholderTextColor="#6B6B72"
             maxLength={50}
-            className="bg-surface-alt border border-border rounded-lg px-4 py-3.5 text-text-primary text-base mb-5"
+            className="bg-surface-alt-light dark:bg-surface-alt border border-border-light dark:border-border rounded-lg px-4 py-3.5 text-text-primary-light dark:text-text-primary text-base mb-5"
           />
 
-          <Text className="text-text-secondary text-xs font-semibold uppercase tracking-wide mb-2">
+          <Text className="text-text-secondary-light dark:text-text-secondary text-xs font-semibold uppercase tracking-wide mb-2">
             Last name
           </Text>
           <TextInput
@@ -118,21 +123,21 @@ export default function EditProfileScreen() {
             placeholder="Last name"
             placeholderTextColor="#6B6B72"
             maxLength={50}
-            className="bg-surface-alt border border-border rounded-lg px-4 py-3.5 text-text-primary text-base mb-5"
+            className="bg-surface-alt-light dark:bg-surface-alt border border-border-light dark:border-border rounded-lg px-4 py-3.5 text-text-primary-light dark:text-text-primary text-base mb-5"
           />
 
           {/* Username intentionally isn't editable here — see the grayed-out
               row on the Settings screen for why. */}
-          <Text className="text-text-secondary text-xs font-semibold uppercase tracking-wide mb-2">
+          <Text className="text-text-secondary-light dark:text-text-secondary text-xs font-semibold uppercase tracking-wide mb-2">
             Username
           </Text>
-          <View className="bg-surface border border-border rounded-lg px-4 py-3.5 mb-6 opacity-50">
-            <Text className="text-text-primary text-base">@{user?.username}</Text>
+          <View className="bg-surface-light dark:bg-surface border border-border-light dark:border-border rounded-lg px-4 py-3.5 mb-6 opacity-50">
+            <Text className="text-text-primary-light dark:text-text-primary text-base">@{user?.username}</Text>
           </View>
 
           <PrimaryButton label="Save Changes" onPress={onSave} disabled={!isDirty} loading={saving} />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </ThemedSafeAreaView>
   );
 }
