@@ -1,14 +1,13 @@
+import ThemedSafeAreaView from "@/components/ThemedSafeAreaView";
+import { useAuth } from "@clerk/expo";
 import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import { AlertCircle } from "lucide-react-native";
+import { AlertCircle, LogIn } from "lucide-react-native";
 import React, { useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { PrimaryButton } from "../../components/Buttons";
 import { PickedMedia, UploadDropZone } from "../../components/UploadDropZone";
-import { useAuth } from "@clerk/expo";
-import { SafeAreaView } from "@/components/CustomSafeAreaView";
-import ThemedSafeAreaView from "@/components/ThemedSafeAreaView";
 
 const MAX_IMAGE_MB = 10;
 const MAX_VIDEO_MB = 30;
@@ -122,6 +121,32 @@ export default function UploadScreen() {
     });
     onClear();
   };
+
+  if (!isSignedIn) {
+    return (
+      <ThemedSafeAreaView>
+        <View className="flex-1 items-center justify-center px-8">
+          <View className="w-20 h-20 rounded-full bg-surface-alt-light dark:bg-surface-alt items-center justify-center mb-5">
+            <LogIn size={30} color="#8B5CF6" strokeWidth={1.75} />
+          </View>
+          <Text className="text-text-primary-light dark:text-text-primary text-lg font-bold text-center mb-1.5">
+            Sign in to upload
+          </Text>
+          <Text className="text-text-secondary text-sm text-center leading-5 mb-6">
+            Track your uploads, saved memes, and stats once you&apos;re signed in.
+          </Text>
+          <PrimaryButton
+            label="Sign In"
+            onPress={() => router.push('/(auth)/sign-in')}
+            className="w-full max-w-60 mb-3"
+          />
+          <Pressable onPress={() => router.push('/(auth)/sign-up')}>
+            <Text className="text-primary text-sm font-semibold">Create an account</Text>
+          </Pressable>
+        </View>
+      </ThemedSafeAreaView>
+    );
+  }
 
   return (
     <ThemedSafeAreaView>

@@ -16,6 +16,7 @@ import {
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   Switch,
@@ -97,6 +98,7 @@ export default function SettingsScreen() {
   const { user } = useUser();
   const { signOut } = useClerk();
   const { showToast } = useToast();
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const [darkMode, setDarkMode] = useState(true);
   const [notifications, setNotifications] = useState(true);
@@ -120,10 +122,12 @@ export default function SettingsScreen() {
 
   const onConfirmSignOut = async () => {
     setSignOutVisible(false);
+    setIsSigningOut(true);
     try {
       await signOut();
       router.replace("/(auth)/sign-in");
     } catch {
+      setIsSigningOut(false);
       showToast({
         message: "Couldn\u2019t sign out. Try again.",
         variant: "error",
@@ -241,6 +245,23 @@ export default function SettingsScreen() {
         onConfirm={onConfirmSignOut}
         onCancel={() => setSignOutVisible(false)}
       />
+
+      {isSigningOut && (
+        <View className="absolute inset-0 bg-bg-light dark:bg-bg items-center justify-center z-50">
+          <ActivityIndicator
+            size="large"
+            color={isDark ? "#A78BFA" : "#8B5CF6"}
+          />
+
+          <Text className="text-text-primary-light dark:text-text-primary text-base font-semibold mt-4">
+            Signing you out...
+          </Text>
+
+          <Text className="text-text-secondary-light dark:text-text-secondary text-sm mt-1">
+            Please wait a moment
+          </Text>
+        </View>
+      )}
     </ThemedSafeAreaView>
   );
 }

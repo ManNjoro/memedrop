@@ -1,6 +1,6 @@
 import { SafeAreaView } from "@/components/CustomSafeAreaView";
 import { useAuth, useSignIn } from "@clerk/expo";
-import { Link } from "expo-router";
+import { Link, router } from "expo-router";
 import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -57,8 +57,9 @@ export default function SignInScreen() {
         try {
           const token = await getToken();
           await syncUser(token);
+          router.replace('/(tabs)')
         } catch {
-          // swallow — see comment above
+          // swallow
         }
       } else {
         setFormError("Additional verification is required for this account.");
