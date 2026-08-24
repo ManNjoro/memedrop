@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, Text, ScrollView, Pressable, useColorScheme } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useUser } from '@clerk/expo';
 import { Settings, Inbox, LogIn, WifiOff } from 'lucide-react-native';
@@ -11,6 +11,8 @@ import { SkeletonGrid } from '../../components/SkeletonLoader';
 import { useUserWithMemes } from '../../lib/hooks/useUserWithMemes';
 import { toCardMemeFromUserItem } from '../../lib/mappers';
 import { SafeAreaView } from '@/components/CustomSafeAreaView';
+import ThemedSafeAreaView from '@/components/ThemedSafeAreaView';
+
 
 type ProfileTab = 'uploads' | 'saved';
 
@@ -23,6 +25,10 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { isSignedIn, isLoaded, user } = useUser();
   const [tab, setTab] = useState<ProfileTab>('uploads');
+    const colorScheme = useColorScheme();
+    const isDark = colorScheme === "dark";
+  
+    const iconColor = isDark ? "#F5F5F0" : "#121214";
 
   const { profile, memes, loading, error, refresh } = useUserWithMemes(isSignedIn ? user?.username ?? undefined : undefined);
 
@@ -36,17 +42,17 @@ export default function ProfileScreen() {
 
   // Loading Clerk state — avoid flashing the signed-out view.
   if (!isLoaded) {
-    return <SafeAreaView className="flex-1 bg-bg" />;
+    return <SafeAreaView className="flex-1 bg-bg-light dark:bg-bg" />;
   }
 
   if (!isSignedIn) {
     return (
-      <SafeAreaView edges={['top']} className="flex-1 bg-bg">
+      <ThemedSafeAreaView>
         <View className="flex-1 items-center justify-center px-8">
-          <View className="w-20 h-20 rounded-full bg-surface-alt items-center justify-center mb-5">
+          <View className="w-20 h-20 rounded-full bg-surface-alt-light dark:bg-surface-alt items-center justify-center mb-5">
             <LogIn size={30} color="#8B5CF6" strokeWidth={1.75} />
           </View>
-          <Text className="text-text-primary text-lg font-bold text-center mb-1.5">
+          <Text className="text-text-primary-light dark:text-text-primary text-lg font-bold text-center mb-1.5">
             Sign in to see your profile
           </Text>
           <Text className="text-text-secondary text-sm text-center leading-5 mb-6">
@@ -61,7 +67,7 @@ export default function ProfileScreen() {
             <Text className="text-primary text-sm font-semibold">Create an account</Text>
           </Pressable>
         </View>
-      </SafeAreaView>
+      </ThemedSafeAreaView>
     );
   }
 
@@ -73,36 +79,36 @@ export default function ProfileScreen() {
   const right = uploads.filter((_, i) => i % 2 === 1);
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-bg">
+    <ThemedSafeAreaView>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View className="flex-row items-center justify-between px-4 pt-2 pb-1">
-          <Text className="text-text-primary text-xl font-extrabold">Profile</Text>
+          <Text className="text-text-primary-light dark:text-text-primary text-xl font-extrabold">Profile</Text>
           <Pressable
             onPress={() => router.push('/settings')}
             hitSlop={8}
             accessibilityLabel="Settings"
-            className="w-10 h-10 rounded-full bg-surface-alt items-center justify-center"
+            className="w-10 h-10 rounded-full bg-surface-alt-light dark:bg-surface-alt items-center justify-center"
           >
-            <Settings size={19} color="#F5F5F0" />
+            <Settings size={19} color={iconColor} />
           </Pressable>
         </View>
 
         <View className="items-center px-6 pt-4 pb-6">
           <Avatar uri={user?.imageUrl} name={user?.username ?? 'you'} size="lg" />
-          <Text className="text-text-primary text-lg font-bold mt-3">@{user?.username ?? 'you'}</Text>
+          <Text className="text-text-primary-light dark:text-text-primary text-lg font-bold mt-3">@{user?.username ?? 'you'}</Text>
           <Text className="text-text-muted text-xs mt-1">{memberSince}</Text>
 
           <View className="flex-row mt-6" style={{ gap: 32 }}>
             <View className="items-center">
-              <Text className="text-text-primary text-lg font-extrabold">{profile?.memeCount ?? memes.length}</Text>
+              <Text className="text-text-primary-light dark:text-text-primary text-lg font-extrabold">{profile?.memeCount ?? memes.length}</Text>
               <Text className="text-text-muted text-xs mt-0.5">Uploads</Text>
             </View>
             <View className="items-center">
-              <Text className="text-text-primary text-lg font-extrabold">{totalDownloads}</Text>
+              <Text className="text-text-primary-light dark:text-text-primary text-lg font-extrabold">{totalDownloads}</Text>
               <Text className="text-text-muted text-xs mt-0.5">Downloads</Text>
             </View>
             <View className="items-center">
-              <Text className="text-text-primary text-lg font-extrabold">{totalLikes}</Text>
+              <Text className="text-text-primary-light dark:text-text-primary text-lg font-extrabold">{totalLikes}</Text>
               <Text className="text-text-muted text-xs mt-0.5">Likes</Text>
             </View>
           </View>
@@ -114,7 +120,7 @@ export default function ProfileScreen() {
             onPress={() => setTab('uploads')}
             className={`flex-1 items-center pb-3 border-b-2 ${tab === 'uploads' ? 'border-primary' : 'border-transparent'}`}
           >
-            <Text className={`text-sm font-bold ${tab === 'uploads' ? 'text-text-primary' : 'text-text-muted'}`}>
+            <Text className={`text-sm font-bold ${tab === 'uploads' ? 'text-text-primary-light dark:text-text-primary' : 'text-text-muted'}`}>
               My Memes
             </Text>
           </Pressable>
@@ -122,7 +128,7 @@ export default function ProfileScreen() {
             onPress={() => setTab('saved')}
             className={`flex-1 items-center pb-3 border-b-2 ${tab === 'saved' ? 'border-primary' : 'border-transparent'}`}
           >
-            <Text className={`text-sm font-bold ${tab === 'saved' ? 'text-text-primary' : 'text-text-muted'}`}>
+            <Text className={`text-sm font-bold ${tab === 'saved' ? 'text-text-primary-light dark:text-text-light' : 'text-text-muted'}`}>
               Saved
             </Text>
           </Pressable>
@@ -171,6 +177,6 @@ export default function ProfileScreen() {
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </ThemedSafeAreaView>
   );
 }
