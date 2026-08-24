@@ -1,21 +1,21 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Switch } from 'react-native';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from '@/components/CustomSafeAreaView';
+import ThemedSafeAreaView from '@/components/ThemedSafeAreaView';
 import { useClerk, useUser } from '@clerk/expo';
+import { useRouter } from 'expo-router';
 import {
   ArrowLeft,
-  User,
   AtSign,
-  LogOut,
-  Moon,
   Bell,
-  Info,
-  Shield,
+  ChevronRight,
   FileText,
   Flag,
-  ChevronRight,
+  Info,
+  LogOut,
+  Moon,
+  Shield,
+  User,
 } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { Pressable, ScrollView, Switch, Text, useColorScheme, View } from 'react-native';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
 import { useToast } from '../../components/Toast';
 import { applyStoredThemePreference, setThemePreference } from '../../lib/theme';
@@ -38,12 +38,12 @@ function SettingsRow({ icon: Icon, label, value, onPress, destructive, disabled,
       onPress={onPress}
       disabled={!isInteractive}
       accessibilityRole={isInteractive ? 'button' : undefined}
-      className={`flex-row items-center px-4 py-3.5 ${isInteractive ? 'active:bg-surface-alt' : ''} ${disabled ? 'opacity-50' : ''}`}
+      className={`flex-row items-center px-4 py-3.5 ${isInteractive ? 'active:bg-surface-alt-light dark:active:bg-surface' : ''} ${disabled ? 'opacity-50' : ''}`}
     >
-      <View className={`w-8 h-8 rounded-full items-center justify-center mr-3 ${destructive ? 'bg-danger/15' : 'bg-surface-alt'}`}>
+      <View className={`w-8 h-8 rounded-full items-center justify-center mr-3 ${destructive ? 'bg-danger/15' : 'bg-surface-alt-light dark:bg-surface-alt'}`}>
         <Icon size={16} color={destructive ? '#F5484B' : '#A3A3AA'} />
       </View>
-      <Text className={`flex-1 text-sm font-medium ${destructive ? 'text-danger' : 'text-text-primary'}`}>
+      <Text className={`flex-1 text-sm font-medium ${destructive ? 'text-danger' : 'text-text-primary-light dark:text-text-primary'}`}>
         {label}
       </Text>
       {right ? (
@@ -77,6 +77,10 @@ export default function SettingsScreen() {
   const [darkMode, setDarkMode] = useState(true);
   const [notifications, setNotifications] = useState(true);
   const [signOutVisible, setSignOutVisible] = useState(false);
+  const colorScheme = useColorScheme();
+      const isDark = colorScheme === "dark";
+    
+      const iconColor = isDark ? "#F5F5F0" : "#121214";
 
   // Hydrate the switch from the actual saved preference rather than
   // assuming dark — someone may have already switched to light mode in a
@@ -101,39 +105,36 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-bg">
+    <ThemedSafeAreaView>
       <View className="flex-row items-center px-4 pt-2 pb-3">
         <Pressable onPress={() => router.back()} hitSlop={8} accessibilityLabel="Go back" className="mr-3">
-          <ArrowLeft size={22} color="#F5F5F0" />
+          <ArrowLeft size={22} color={iconColor} />
         </Pressable>
-        <Text className="text-text-primary text-xl font-extrabold">Settings</Text>
+        <Text className="text-text-primary-light dark:text-text-primary text-xl font-extrabold">Settings</Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         <SectionLabel>Account</SectionLabel>
-        <View className="bg-surface mx-4 rounded-lg border border-border overflow-hidden">
+        <View className="bg-surface-light dark:bg-surface mx-4 rounded-lg border border-border-light dark:border-border overflow-hidden">
           <SettingsRow
             icon={User}
             label="Edit Profile"
             value={user?.fullName || undefined}
             onPress={() => router.push('/settings/edit-profile')}
           />
-          <View className="h-px bg-border ml-[52px]" />
-          {/* Usernames aren't editable — changing one would break every
-              existing /creator/[username] link and share URL pointing at
-              this person's profile. Shown read-only, grayed out. */}
+          <View className="h-px bg-border-light dark:bg-border ml-13" />
           <SettingsRow
             icon={AtSign}
             label="Username"
             value={user ? `@${user.username}` : undefined}
             disabled
           />
-          <View className="h-px bg-border ml-[52px]" />
+          <View className="h-px bg-border-light dark:bg-border ml-13" />
           <SettingsRow icon={LogOut} label="Sign Out" destructive onPress={() => setSignOutVisible(true)} />
         </View>
 
         <SectionLabel>Preferences</SectionLabel>
-        <View className="bg-surface mx-4 rounded-lg border border-border overflow-hidden">
+        <View className="bg-surface-light dark:bg-surface mx-4 rounded-lg border border-border-light dark:border-border overflow-hidden">
           <SettingsRow
             icon={Moon}
             label="Dark Mode"
@@ -142,11 +143,11 @@ export default function SettingsScreen() {
                 value={darkMode}
                 onValueChange={onToggleDarkMode}
                 trackColor={{ false: '#2A2A2E', true: '#8B5CF6' }}
-                thumbColor="#F5F5F0"
+                thumbColor={iconColor}
               />
             }
           />
-          <View className="h-px bg-border ml-[52px]" />
+          <View className="h-px bg-border-light dark:bg-border ml-13" />
           <SettingsRow
             icon={Bell}
             label="Notifications"
@@ -155,26 +156,21 @@ export default function SettingsScreen() {
                 value={notifications}
                 onValueChange={setNotifications}
                 trackColor={{ false: '#2A2A2E', true: '#8B5CF6' }}
-                thumbColor="#F5F5F0"
+                thumbColor={iconColor}
               />
             }
           />
         </View>
 
-        {/* Storage section intentionally omitted — upload limits are fixed,
-            developer-set constants (see MAX_IMAGE_MB / MAX_VIDEO_MB in
-            app/(tabs)/upload.tsx) and there's no real storage-preference
-            behavior to expose yet on Cloudinary's free tier. Revisit this
-            once there's an actual paid-tier or usage-based reason to. */}
 
         <SectionLabel>About</SectionLabel>
-        <View className="bg-surface mx-4 rounded-lg border border-border overflow-hidden">
+        <View className="bg-surface-light dark:bg-surface mx-4 rounded-lg border border-border-light dark:border-border overflow-hidden">
           <SettingsRow icon={Info} label="About MemeDrop" onPress={() => {}} />
-          <View className="h-px bg-border ml-[52px]" />
+          <View className="h-px bg-border-light dark:bg-border ml-13" />
           <SettingsRow icon={Shield} label="Privacy Policy" onPress={() => {}} />
-          <View className="h-px bg-border ml-[52px]" />
+          <View className="h-px bg-border-light dark:bg-border ml-13" />
           <SettingsRow icon={FileText} label="Terms of Service" onPress={() => {}} />
-          <View className="h-px bg-border ml-[52px]" />
+          <View className="h-px bg-border-light dark:bg-border ml-13" />
           <SettingsRow icon={Flag} label="Report a Problem" onPress={() => {}} />
         </View>
 
@@ -190,6 +186,6 @@ export default function SettingsScreen() {
         onConfirm={onConfirmSignOut}
         onCancel={() => setSignOutVisible(false)}
       />
-    </SafeAreaView>
+    </ThemedSafeAreaView>
   );
 }
