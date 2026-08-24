@@ -1,5 +1,6 @@
 import ThemedSafeAreaView from "@/components/ThemedSafeAreaView";
 import { useClerk, useUser } from "@clerk/expo";
+import { usePostHog } from "posthog-react-native";
 import { useRouter } from "expo-router";
 import {
   ArrowLeft,
@@ -97,6 +98,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { user } = useUser();
   const { signOut } = useClerk();
+  const posthogClient = usePostHog();
   const { showToast } = useToast();
   const [isSigningOut, setIsSigningOut] = useState(false);
 
@@ -124,7 +126,9 @@ export default function SettingsScreen() {
     setSignOutVisible(false);
     setIsSigningOut(true);
     try {
+      posthogClient.capture("user_signed_out");
       await signOut();
+      posthogClient.reset();
       router.replace("/(auth)/sign-in");
     } catch {
       setIsSigningOut(false);

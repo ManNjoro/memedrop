@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Image, ScrollView, Pressable, KeyboardAvoidingView, Platform, useColorScheme } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { usePostHog } from 'posthog-react-native';
 import { SafeAreaView } from '@/components/CustomSafeAreaView';
 import { useAuth } from '@clerk/expo';
 import { ArrowLeft, Plus, PartyPopper, AlertTriangle } from 'lucide-react-native';
@@ -19,6 +20,7 @@ type FieldErrors = Partial<Record<'title' | 'description' | 'tags', string>>;
 export default function UploadDetailsScreen() {
   const router = useRouter();
   const { getToken } = useAuth();
+  const posthog = usePostHog();
   const { uri, type, durationSec: durationSecParam } = useLocalSearchParams<{
     uri: string;
     type: 'image' | 'video';
@@ -104,6 +106,11 @@ export default function UploadDetailsScreen() {
       }
 
       setProgress(1);
+      posthog.capture('meme_uploaded', {
+        media_type: type,
+        tag_count: result.data.tags.length,
+        has_description: Boolean(result.data.description),
+      });
       setNewMemeId(meme.id);
       setStage('success');
     } catch (e) {

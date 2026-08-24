@@ -3,6 +3,7 @@ import { useAuth } from "@clerk/expo";
 import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
+import { usePostHog } from "posthog-react-native";
 import { AlertCircle, LogIn } from "lucide-react-native";
 import React, { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -19,6 +20,7 @@ export default function UploadScreen() {
   const [durationSec, setDurationSec] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { isSignedIn } = useAuth();
+  const posthog = usePostHog();
 
   const validateAndSet = async (
     asset: ImagePicker.ImagePickerAsset,
@@ -65,6 +67,7 @@ export default function UploadScreen() {
         uri: asset.uri,
         type,
       });
+      posthog.capture("upload_media_selected", { media_type: type });
     } catch (error) {
       console.error("File validation error:", error);
       setError("Couldn't read that file. Try a different one.");
@@ -111,6 +114,7 @@ export default function UploadScreen() {
       router.push('/(auth)/sign-in');
       return;
     }
+    posthog.capture("upload_details_started", { media_type: media.type });
     router.push({
       pathname: "/upload/details",
       params: {

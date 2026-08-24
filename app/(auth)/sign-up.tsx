@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { Link } from 'expo-router';
 import { useAuth, useSignUp } from '@clerk/expo';
+import { usePostHog } from 'posthog-react-native';
 import { AuthInput } from '../../components/AuthInput';
 import { PrimaryButton } from '../../components/Buttons';
 import { SafeAreaView } from '@/components/CustomSafeAreaView';
@@ -14,6 +15,7 @@ type VerifyFieldErrors = Partial<Record<'code', string>>;
 export default function SignUpScreen() {
   const { isLoaded, getToken } = useAuth();
   const { signUp } = useSignUp();
+  const posthog = usePostHog();
 
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -80,6 +82,7 @@ export default function SignUpScreen() {
         return;
       }
       await signUp.finalize();
+      posthog.capture('user_signed_up');
 
       // No manual navigation here on purpose: Stack.Protected in
       // app/_layout.tsx reacts to isSignedIn flipping true and

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import { usePostHog } from 'posthog-react-native';
 import { SafeAreaView } from '@/components/CustomSafeAreaView';
 import { useUser } from '@clerk/expo';
 import * as ImagePicker from 'expo-image-picker';
@@ -13,6 +14,7 @@ export default function EditProfileScreen() {
   const router = useRouter();
   const { user } = useUser();
   const { showToast } = useToast();
+  const posthog = usePostHog();
 
   const [firstName, setFirstName] = useState(user?.firstName ?? '');
   const [lastName, setLastName] = useState(user?.lastName ?? '');
@@ -62,6 +64,7 @@ export default function EditProfileScreen() {
     setSaving(true);
     try {
       await user.update({ firstName: firstName.trim(), lastName: lastName.trim() });
+      posthog.capture('profile_updated', { avatar_changed: avatarUri !== null });
       showToast({ message: 'Profile updated', variant: 'success' });
       router.back();
     } catch {

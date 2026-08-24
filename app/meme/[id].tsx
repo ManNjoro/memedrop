@@ -6,6 +6,7 @@ import * as Clipboard from 'expo-clipboard';
 import { Directory, File, Paths } from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { usePostHog } from 'posthog-react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import {
   ArrowLeft,
@@ -186,6 +187,7 @@ export default function MemeDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { userId, getToken } = useAuth();
   const { showToast } = useToast();
+  const posthog = usePostHog();
 
   const [meme, setMeme] = useState<ApiMemeDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -220,13 +222,17 @@ export default function MemeDetailsScreen() {
   const isOwner = !!meme && !!userId && meme.uploader.id === userId;
 
   const onShare = async () => {
+    if (!meme) return;
     try {
       await Share.share({ message: `Check this out on MemeDrop: ${shareUrl}` });
+      posthog.capture('meme_shared', { media_type: meme.mediaType });
     } catch {}
   };
 
   const onCopyLink = async () => {
+    if (!meme) return;
     await Clipboard.setStringAsync(shareUrl);
+    posthog.capture('meme_link_copied', { media_type: meme.mediaType });
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
   };
@@ -248,6 +254,7 @@ export default function MemeDetailsScreen() {
       await MediaLibrary.saveToLibraryAsync(output.uri);
 
       recordDownload(meme.id).catch(() => {});
+      posthog.capture('meme_downloaded', { media_type: meme.mediaType });
 
       showToast({ message: 'Saved to your gallery', variant: 'success' });
     } catch {
@@ -263,6 +270,7 @@ export default function MemeDetailsScreen() {
     try {
       const token = await getToken();
       await deleteMeme(meme.id, token);
+      posthog.capture('meme_deleted', { media_type: meme.mediaType });
       setConfirmDeleteOpen(false);
       showToast({ message: 'Meme deleted', variant: 'success' });
       router.back();

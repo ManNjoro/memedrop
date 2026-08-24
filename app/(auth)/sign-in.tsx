@@ -1,6 +1,7 @@
 import { SafeAreaView } from "@/components/CustomSafeAreaView";
 import { useAuth, useSignIn } from "@clerk/expo";
 import { Link, router } from "expo-router";
+import { usePostHog } from "posthog-react-native";
 import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -20,6 +21,7 @@ type FieldErrors = Partial<Record<"identifier" | "password", string>>;
 export default function SignInScreen() {
   const { isLoaded, getToken } = useAuth();
   const { signIn } = useSignIn();
+  const posthog = usePostHog();
 
   // "identifier" because this Clerk instance accepts both email and username at sign-in.
   const [identifier, setIdentifier] = useState("");
@@ -54,6 +56,7 @@ export default function SignInScreen() {
       }
       if (signIn.status === "complete") {
         await signIn.finalize();
+        posthog.capture("user_signed_in");
         try {
           const token = await getToken();
           await syncUser(token);
