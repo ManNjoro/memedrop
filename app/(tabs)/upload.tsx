@@ -8,6 +8,7 @@ import { PrimaryButton } from "../../components/Buttons";
 import { PickedMedia, UploadDropZone } from "../../components/UploadDropZone";
 import { useAuth } from "@clerk/expo";
 import { SafeAreaView } from "@/components/CustomSafeAreaView";
+import ThemedSafeAreaView from "@/components/ThemedSafeAreaView";
 
 const MAX_IMAGE_MB = 10;
 const MAX_VIDEO_MB = 30;
@@ -123,9 +124,9 @@ export default function UploadScreen() {
   };
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
+    <ThemedSafeAreaView>
       <ScrollView className="px-4" showsVerticalScrollIndicator={false}>
-        <Text className="text-text-primary text-2xl font-extrabold pt-2 mb-6">
+        <Text className="text-text-primary-light dark:text-text-primary text-2xl font-extrabold pt-2 mb-6">
           Drop a meme
         </Text>
 
@@ -146,19 +147,19 @@ export default function UploadScreen() {
         )}
 
         {/* Requirements */}
-        <View className="bg-surface rounded-lg border border-border px-4 py-4 mt-5">
-          <Text className="text-text-primary text-sm font-bold mb-2.5">
+        <View className="bg-surface-light dark:bg-surface rounded-lg border border-border-light dark:border-border px-4 py-4 mt-5">
+          <Text className="text-text-primary-light dark:text-text-primary text-sm font-bold mb-2.5">
             Upload requirements
           </Text>
           <View className="mb-1.5">
             <Text className="text-text-secondary text-xs">
-              <Text className="font-semibold text-text-primary">Images</Text> —
+              <Text className="font-semibold text-text-primary-light dark:text-text-primary">Images</Text> —
               Maximum {MAX_IMAGE_MB} MB
             </Text>
           </View>
           <View>
             <Text className="text-text-secondary text-xs">
-              <Text className="font-semibold text-text-primary">Videos</Text> —
+              <Text className="font-semibold text-text-primary-light dark:text-text-primary">Videos</Text> —
               Maximum {MAX_VIDEO_MB} MB, up to {MAX_VIDEO_SECONDS}s
             </Text>
           </View>
@@ -171,6 +172,6 @@ export default function UploadScreen() {
           className="mt-6 mb-8"
         />
       </ScrollView>
-    </SafeAreaView>
+    </ThemedSafeAreaView>
   );
 }

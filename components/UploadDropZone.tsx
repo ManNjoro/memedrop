@@ -1,10 +1,10 @@
-import React from 'react';
-import { View, Text, Image, Pressable } from 'react-native';
-import { ImagePlus, Video as VideoIcon, X } from 'lucide-react-native';
+import { ImagePlus, Video as VideoIcon, X } from "lucide-react-native";
+import React from "react";
+import { Image, Pressable, Text, useColorScheme, View } from "react-native";
 
 type PickedMedia = {
   uri: string;
-  type: 'image' | 'video';
+  type: "image" | "video";
 } | null;
 
 type UploadDropZoneProps = {
@@ -15,22 +15,38 @@ type UploadDropZoneProps = {
 };
 
 /** Empty picker state + selected-media preview, reused on the Upload screen. */
-export function UploadDropZone({ media, onPickPhoto, onPickVideo, onClear }: UploadDropZoneProps) {
+export function UploadDropZone({
+  media,
+  onPickPhoto,
+  onPickVideo,
+  onClear,
+}: UploadDropZoneProps) {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
+  const iconColor = isDark ? "#F5F5F0" : "#121214";
+  const uploadIconColor = isDark ? "#A78BFA" : "#8B5CF6";
   if (media) {
     return (
-      <View className="rounded-lg overflow-hidden bg-surface border border-border">
-        <Image source={{ uri: media.uri }} style={{ width: '100%', height: 320 }} resizeMode="cover" />
+      <View className="rounded-lg overflow-hidden bg-surface-light dark-bg-surface border border-border-light dark:border-border">
+        <Image
+          source={{ uri: media.uri }}
+          style={{ width: "100%", height: 320 }}
+          resizeMode="cover"
+        />
         <Pressable
           onPress={onClear}
           hitSlop={8}
           accessibilityLabel="Remove selected media"
           className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/60 items-center justify-center"
         >
-          <X size={18} color="#F5F5F0" />
+          <X size={18} color={uploadIconColor} />
         </Pressable>
-        {media.type === 'video' && (
+        {media.type === "video" && (
           <View className="absolute bottom-3 left-3 bg-black/60 rounded-sm px-2 py-1">
-            <Text className="text-text-primary text-xs font-semibold">Video selected</Text>
+            <Text className="text-text-primary text-xs font-semibold">
+              Video selected
+            </Text>
           </View>
         )}
       </View>
@@ -38,11 +54,13 @@ export function UploadDropZone({ media, onPickPhoto, onPickVideo, onClear }: Upl
   }
 
   return (
-    <View className="rounded-lg border-2 border-dashed border-border bg-surface-alt items-center justify-center py-14 px-6">
+    <View className="rounded-lg border-2 border-dashed border-border-light dark:border-border bg-surface-alt-light dark:bg-surface-alt items-center justify-center py-14 px-6">
       <View className="w-16 h-16 rounded-full bg-surface items-center justify-center mb-4">
-        <ImagePlus size={28} color="#8B5CF6" />
+        <ImagePlus size={28} color={uploadIconColor} />
       </View>
-      <Text className="text-text-primary text-base font-bold mb-1">Choose a meme</Text>
+      <Text className="text-text-primary-light dark:text-text-primary text-base font-bold mb-1">
+        Choose a meme
+      </Text>
       <Text className="text-text-muted text-sm text-center mb-6">
         Pick a photo or video from your gallery
       </Text>
@@ -50,18 +68,22 @@ export function UploadDropZone({ media, onPickPhoto, onPickVideo, onClear }: Upl
         <Pressable
           onPress={onPickPhoto}
           accessibilityLabel="Choose a photo"
-          className="flex-row items-center px-5 py-3 rounded-lg bg-surface border border-border"
+          className="flex-row items-center px-5 py-3 rounded-lg bg-surface-light dark:bg-surface border border-border-light dark:border-border"
         >
-          <ImagePlus size={16} color="#F5F5F0" />
-          <Text className="text-text-primary text-sm font-semibold ml-2">Photo</Text>
+          <ImagePlus size={16} color={iconColor} />
+          <Text className="text-text-primary-light dark:text-text-primary text-sm font-semibold ml-2">
+            Photo
+          </Text>
         </Pressable>
         <Pressable
           onPress={onPickVideo}
           accessibilityLabel="Choose a video"
-          className="flex-row items-center px-5 py-3 rounded-lg bg-surface border border-border"
+          className="flex-row items-center px-5 py-3 rounded-lg bg-surface-light dark:bg-surface border border-border-light dark:border-border"
         >
-          <VideoIcon size={16} color="#F5F5F0" />
-          <Text className="text-text-primary text-sm font-semibold ml-2">Video</Text>
+          <VideoIcon size={16} color={iconColor} />
+          <Text className="text-text-primary-light dark:text-text-primary text-sm font-semibold ml-2">
+            Video
+          </Text>
         </Pressable>
       </View>
     </View>

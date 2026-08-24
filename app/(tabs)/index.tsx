@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, Pressable, RefreshControl, Image } from 'react-native';
+import { View, Text, ScrollView, Pressable, RefreshControl, Image, useColorScheme } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useUser } from '@clerk/expo';
 import { Search, WifiOff } from 'lucide-react-native';
@@ -38,6 +38,10 @@ export default function HomeScreen() {
   const { user } = useUser();
   const { showToast } = useToast();
   const [activeCategory, setActiveCategory] = useState<Category>('Trending');
+  const colorScheme = useColorScheme();
+    const isDark = colorScheme === "dark";
+  
+    const iconColor = isDark ? "#F5F5F0" : "#121214";
 
   const params = useMemo(() => paramsForCategory(activeCategory), [activeCategory]);
   const { memes, loading, refreshing, error, refresh } = useMemeFeed(params);
@@ -71,7 +75,7 @@ export default function HomeScreen() {
               accessibilityLabel="Search"
               className="w-10 h-10 rounded-full bg-surface-alt-light dark:bg-surface-alt items-center justify-center mr-3"
             >
-              <Search size={20} color="#F5F5F0" />
+              <Search size={20} color={iconColor} />
             </Pressable>
             <Pressable onPress={() => router.push('/(tabs)/profile')} accessibilityLabel="Your profile">
               <Avatar uri={user?.imageUrl} name={user?.username ?? 'You'} size="sm" />
