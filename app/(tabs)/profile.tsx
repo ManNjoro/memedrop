@@ -128,7 +128,7 @@ export default function ProfileScreen() {
             onPress={() => setTab('saved')}
             className={`flex-1 items-center pb-3 border-b-2 ${tab === 'saved' ? 'border-primary' : 'border-transparent'}`}
           >
-            <Text className={`text-sm font-bold ${tab === 'saved' ? 'text-text-primary-light dark:text-text-light' : 'text-text-muted'}`}>
+            <Text className={`text-sm font-bold ${tab === 'saved' ? 'text-text-primary-light dark:text-text-primary' : 'text-text-muted'}`}>
               Saved
             </Text>
           </Pressable>
