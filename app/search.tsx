@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, NativeSyntheticEvent, NativeScrollEvent, useColorScheme } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from '@/components/CustomSafeAreaView';
 import { ArrowLeft, ChevronDown, SearchX, WifiOff } from 'lucide-react-native';
@@ -12,6 +12,7 @@ import { BottomSheet, SheetOption } from '../components/BottomSheet';
 import { useMemeFeed } from '../lib/hooks/useMemeFeed';
 import { toCardMeme } from '../lib/mappers';
 import type { ApiMediaType, ApiSort } from '../lib/api/types';
+import ThemedSafeAreaView from '@/components/ThemedSafeAreaView';
 
 type MediaFilter = 'all' | 'images' | 'videos';
 type SortOption = 'Newest' | 'Oldest' | 'Most Downloaded' | 'Most Popular';
@@ -40,6 +41,10 @@ export default function SearchResultsScreen() {
   const [filter, setFilter] = useState<MediaFilter>('all');
   const [sort, setSort] = useState<SortOption>('Newest');
   const [sheetOpen, setSheetOpen] = useState(false);
+  const colorScheme = useColorScheme();
+    const isDark = colorScheme === "dark";
+  
+    const iconColor = isDark ? "#F5F5F0" : "#121214";
 
   // Debounce typing so we're not firing a request per keystroke.
   useEffect(() => {
@@ -62,13 +67,13 @@ export default function SearchResultsScreen() {
   const right = memes.filter((_, i) => i % 2 === 1);
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-bg">
+    <ThemedSafeAreaView>
       {/* Header */}
       <View className="flex-row items-center px-4 pt-2 pb-3">
         <Pressable onPress={() => router.back()} hitSlop={8} accessibilityLabel="Go back" className="mr-3">
-          <ArrowLeft size={22} color="#F5F5F0" />
+          <ArrowLeft size={22} color={iconColor} />
         </Pressable>
-        <Text className="text-text-primary text-xl font-extrabold">Search</Text>
+        <Text className="text-text-primary-light dark:text-text-primary text-xl font-extrabold">Search</Text>
       </View>
 
       <View className="px-4 mb-3">
@@ -83,11 +88,11 @@ export default function SearchResultsScreen() {
             </Text>
             <Pressable
               onPress={() => setSheetOpen(true)}
-              className="flex-row items-center bg-surface-alt rounded-lg px-3 py-1.5"
+              className="flex-row items-center bg-surface-alt-light dark:bg-surface-alt rounded-lg px-3 py-1.5"
               accessibilityLabel="Change sort order"
             >
-              <Text className="text-text-primary text-xs font-semibold mr-1">Sort: {sort}</Text>
-              <ChevronDown size={14} color="#F5F5F0" />
+              <Text className="text-text-primary-light dark:text-text-primary text-xs font-semibold mr-1">Sort: {sort}</Text>
+              <ChevronDown size={14} color={iconColor} />
             </Pressable>
           </View>
 
@@ -163,6 +168,6 @@ export default function SearchResultsScreen() {
           />
         ))}
       </BottomSheet>
-    </SafeAreaView>
+    </ThemedSafeAreaView>
   );
 }

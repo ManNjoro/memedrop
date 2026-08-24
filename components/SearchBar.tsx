@@ -12,7 +12,7 @@ type SearchBarProps = {
 
 export function SearchBar({ value, onChangeText, placeholder = 'Search memes…', onSubmit, autoFocus }: SearchBarProps) {
   return (
-    <View className="flex-row items-center bg-surface-alt border border-border rounded-lg px-4 h-14">
+    <View className="flex-row items-center bg-surface-alt-light dark:bg-surface-alt border border-border-light dark:border-border rounded-lg px-4 h-14">
       <Search size={20} color="#6B6B72" />
       <TextInput
         value={value}
@@ -23,7 +23,7 @@ export function SearchBar({ value, onChangeText, placeholder = 'Search memes…'
         autoFocus={autoFocus}
         returnKeyType="search"
         accessibilityLabel="Search memes"
-        className="flex-1 text-text-primary text-base ml-3"
+        className="flex-1 text-text-primary-light dark:text-text-primary text-base ml-3"
       />
       {value.length > 0 && (
         <Pressable onPress={() => onChangeText('')} hitSlop={8} accessibilityLabel="Clear search">
