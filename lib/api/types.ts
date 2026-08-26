@@ -13,6 +13,7 @@ export type ApiMemeListItem = {
   height: number | null;
   downloadsCount: number;
   likesCount: number;
+  viewsCount: number;
   createdAt: string; // ISO
   uploaderId: string;
   uploaderUsername: string;
@@ -24,7 +25,7 @@ export type ApiMemesResponse = {
   nextCursor: string | null;
 };
 
-/** Shape returned by GET /api/memes/:id — includes description and tags, no flattened uploader prefix. */
+/** Shape returned by GET /api/memes/:id — includes description, tags, and the viewer's like/save state. */
 export type ApiMemeDetail = {
   id: string;
   uploaderId: string;
@@ -39,6 +40,7 @@ export type ApiMemeDetail = {
   height: number | null;
   downloadsCount: number;
   likesCount: number;
+  viewsCount: number;
   createdAt: string;
   uploader: {
     id: string;
@@ -46,6 +48,8 @@ export type ApiMemeDetail = {
     avatarUrl: string | null;
   };
   tags: string[];
+  isLiked: boolean;
+  isSaved: boolean;
 };
 
 /** Row shape returned by GET /api/users/:username/memes (unflattened — no uploader fields, since it's implied). */
@@ -63,6 +67,7 @@ export type ApiUserMemeItem = {
   height: number | null;
   downloadsCount: number;
   likesCount: number;
+  viewsCount: number;
   createdAt: string;
 };
 

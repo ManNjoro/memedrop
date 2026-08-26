@@ -1,4 +1,3 @@
-import { SafeAreaView } from '@/components/CustomSafeAreaView';
 import { useAuth } from '@clerk/expo';
 import Slider from '@react-native-community/slider';
 import { useEvent } from 'expo';
@@ -6,11 +5,12 @@ import * as Clipboard from 'expo-clipboard';
 import { Directory, File, Paths } from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { usePostHog } from 'posthog-react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import {
   ArrowLeft,
+  Bookmark,
   Download,
+  Heart,
   Link2,
   Maximize,
   Minimize,
@@ -31,7 +31,16 @@ import { PrimaryButton } from '../../components/Buttons';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
 import { EmptyState } from '../../components/EmptyState';
 import { useToast } from '../../components/Toast';
-import { deleteMeme, fetchMemeById, recordDownload } from '../../lib/api/memes';
+import {
+  deleteMeme,
+  fetchMemeById,
+  likeMeme,
+  recordDownload,
+  recordView,
+  saveMeme,
+  unlikeMeme,
+  unsaveMeme,
+} from '../../lib/api/memes';
 import type { ApiMemeDetail } from '../../lib/api/types';
 import { ApiClientError } from '../../lib/apiClient';
 import { formatRelativeTime } from '../../lib/formatRelativeTime';
@@ -162,7 +171,7 @@ function VideoPlayerBlock({ uri, aspectRatio }: { uri: string; aspectRatio: numb
             >
               {muted ? <VolumeX size={18} color="#F5F5F0" /> : <Volume2 size={18} color="#F5F5F0" />}
             </Pressable>
-            <Text className="text-text-primary text-xs font-medium">
+            <Text className="text-text-primary-light dark:text-text-primary text-xs font-medium">
               {formatTime(position)} / {formatTime(duration)}
             </Text>
           </View>
@@ -186,9 +195,12 @@ function VideoPlayerBlock({ uri, aspectRatio }: { uri: string; aspectRatio: numb
 export default function MemeDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { userId, getToken } = useAuth();
+  const { userId, isSignedIn, getToken } = useAuth();
   const { showToast } = useToast();
-  const posthog = usePostHog();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
+  const iconColor = isDark ? "#F5F5F0" : "#121214";
 
   const [meme, setMeme] = useState<ApiMemeDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -199,18 +211,50 @@ export default function MemeDetailsScreen() {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const colorScheme = useColorScheme();
-    const isDark = colorScheme === "dark";
-  
-    const iconColor = isDark ? "#F5F5F0" : "#121214";
+  // Kept separate from `meme` so liking/saving can update instantly
+  // (optimistic) without waiting on or re-triggering a full refetch.
+  const [isLiked, setIsLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
+  const [isSaved, setIsSaved] = useState(false);
+  const [likeInFlight, setLikeInFlight] = useState(false);
+  const [saveInFlight, setSaveInFlight] = useState(false);
+
+  // Guards against double-firing the view count in React 18 Strict Mode's
+  // dev double-invoke, and against re-recording a view on every refetch.
+  const viewRecordedRef = useRef(false);
+
+  // getToken (and technically isSignedIn) from useAuth() aren't guaranteed
+  // to be referentially stable across renders — Clerk's context can
+  // re-render for reasons unrelated to this screen (token refresh checks,
+  // etc.), handing back a new getToken identity each time. If load() had
+  // depended on them directly in its useCallback deps, that would recreate
+  // load() on every such render, re-fire the effect below, and put the
+  // screen into a load → setLoading(true) → setLoading(false) → repeat
+  // cycle — exactly what "keeps flickering" looks like. Reading them via a
+  // ref instead means load()'s identity depends only on `id`, so the effect
+  // only re-runs when the person actually navigates to a different meme.
+  const authRef = useRef({ isSignedIn, getToken });
+  useEffect(() => {
+    authRef.current = { isSignedIn, getToken };
+  }, [isSignedIn, getToken]);
 
   const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     setError(null);
     try {
-      const result = await fetchMemeById(id);
+      const { isSignedIn: signedIn, getToken: getAuthToken } = authRef.current;
+      const token = signedIn ? await getAuthToken() : null;
+      const result = await fetchMemeById(id, token);
       setMeme(result);
+      setIsLiked(result.isLiked);
+      setLikesCount(result.likesCount);
+      setIsSaved(result.isSaved);
+
+      if (!viewRecordedRef.current) {
+        viewRecordedRef.current = true;
+        recordView(id).catch(() => {}); // best-effort — see recordView's own comment on why simplicity here is fine
+      }
     } catch (e) {
       setError(e instanceof ApiClientError ? e.message : 'Couldn\u2019t load this meme.');
     } finally {
@@ -228,17 +272,13 @@ export default function MemeDetailsScreen() {
   const isOwner = !!meme && !!userId && meme.uploader.id === userId;
 
   const onShare = async () => {
-    if (!meme) return;
     try {
       await Share.share({ message: `Check this out on MemeDrop: ${shareUrl}` });
-      posthog.capture('meme_shared', { media_type: meme.mediaType });
     } catch {}
   };
 
   const onCopyLink = async () => {
-    if (!meme) return;
     await Clipboard.setStringAsync(shareUrl);
-    posthog.capture('meme_link_copied', { media_type: meme.mediaType });
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
   };
@@ -260,7 +300,6 @@ export default function MemeDetailsScreen() {
       await MediaLibrary.saveToLibraryAsync(output.uri);
 
       recordDownload(meme.id).catch(() => {});
-      posthog.capture('meme_downloaded', { media_type: meme.mediaType });
 
       showToast({ message: 'Saved to your gallery', variant: 'success' });
     } catch {
@@ -270,13 +309,60 @@ export default function MemeDetailsScreen() {
     }
   };
 
+  const onToggleLike = async () => {
+    if (!meme || likeInFlight) return;
+    if (!isSignedIn) {
+      showToast({ message: 'Sign in to like memes.', variant: 'error' });
+      return;
+    }
+    // Optimistic update — flip immediately, roll back only if the request fails.
+    const wasLiked = isLiked;
+    const prevCount = likesCount;
+    setIsLiked(!wasLiked);
+    setLikesCount(wasLiked ? Math.max(prevCount - 1, 0) : prevCount + 1);
+    setLikeInFlight(true);
+    try {
+      const token = await getToken();
+      const result = wasLiked ? await unlikeMeme(meme.id, token) : await likeMeme(meme.id, token);
+      setIsLiked(result.liked);
+      setLikesCount(result.likesCount);
+    } catch {
+      setIsLiked(wasLiked);
+      setLikesCount(prevCount);
+      showToast({ message: 'Couldn\u2019t update that. Try again.', variant: 'error' });
+    } finally {
+      setLikeInFlight(false);
+    }
+  };
+
+  const onToggleSave = async () => {
+    if (!meme || saveInFlight) return;
+    if (!isSignedIn) {
+      showToast({ message: 'Sign in to save memes.', variant: 'error' });
+      return;
+    }
+    const wasSaved = isSaved;
+    setIsSaved(!wasSaved);
+    setSaveInFlight(true);
+    try {
+      const token = await getToken();
+      const result = wasSaved ? await unsaveMeme(meme.id, token) : await saveMeme(meme.id, token);
+      setIsSaved(result.saved);
+      if (result.saved) showToast({ message: 'Saved', variant: 'success' });
+    } catch {
+      setIsSaved(wasSaved);
+      showToast({ message: 'Couldn\u2019t update that. Try again.', variant: 'error' });
+    } finally {
+      setSaveInFlight(false);
+    }
+  };
+
   const onConfirmDelete = async () => {
     if (!meme) return;
     setDeleting(true);
     try {
       const token = await getToken();
       await deleteMeme(meme.id, token);
-      posthog.capture('meme_deleted', { media_type: meme.mediaType });
       setConfirmDeleteOpen(false);
       showToast({ message: 'Meme deleted', variant: 'success' });
       router.back();
@@ -290,11 +376,18 @@ export default function MemeDetailsScreen() {
     }
   };
 
+  // Unified to ThemedSafeAreaView across all three states (loading, error,
+  // success) — previously the loading branch used a different SafeAreaView
+  // wrapper with its own manually-applied bg-bg-light dark:bg-bg classes,
+  // which could show a visible flash of mismatched background/padding right
+  // at the loading → loaded transition, on top of the refetch-loop flicker.
   if (loading) {
     return (
-      <SafeAreaView edges={['top']} className="flex-1 bg-bg-light dark:bg-bg items-center justify-center">
-        <ActivityIndicator color="#8B5CF6" />
-      </SafeAreaView>
+      <ThemedSafeAreaView>
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color="#8B5CF6" />
+        </View>
+      </ThemedSafeAreaView>
     );
   }
 
@@ -361,7 +454,7 @@ export default function MemeDetailsScreen() {
           )}
           <Pressable
             onPress={() => router.push(`/creator/${meme.uploader.username}`)}
-            className="flex-row items-center mb-5 mt-2"
+            className="flex-row items-center mb-2 mt-2"
             accessibilityLabel={`View @${meme.uploader.username}'s profile`}
           >
             <Avatar uri={meme.uploader.avatarUrl} name={meme.uploader.username} size="sm" />
@@ -371,6 +464,11 @@ export default function MemeDetailsScreen() {
             </View>
           </Pressable>
 
+          <Text className="text-text-muted text-xs mb-5">
+            {likesCount} {likesCount === 1 ? 'like' : 'likes'} · {meme.viewsCount}{' '}
+            {meme.viewsCount === 1 ? 'view' : 'views'}
+          </Text>
+
           {/* Actions */}
           <PrimaryButton
             label={downloading ? 'Saving…' : 'Download'}
@@ -379,7 +477,37 @@ export default function MemeDetailsScreen() {
             loading={downloading}
             className="mb-3"
           />
-          <View className="flex-row" style={{ gap: 12 }}>
+          <View className="flex-row" style={{ gap: 10 }}>
+            <Pressable
+              onPress={onToggleLike}
+              disabled={likeInFlight}
+              className={`flex-1 flex-row items-center justify-center py-3.5 rounded-lg border ${
+                isLiked ? 'bg-danger/10 border-danger' : 'bg-surface-alt-light dark:bg-surface-alt border-border-light dark:border-border'
+              }`}
+              accessibilityLabel={isLiked ? 'Unlike meme' : 'Like meme'}
+              accessibilityState={{ selected: isLiked }}
+            >
+              <Heart size={16} color={isLiked ? '#F5484B' : '#F5F5F0'} fill={isLiked ? '#F5484B' : 'transparent'} />
+              <Text className={`text-sm font-semibold ml-2 ${isLiked ? 'text-danger' : 'text-text-primary-light dark:text-text-primary'}`}>
+                Like
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={onToggleSave}
+              disabled={saveInFlight}
+              className={`flex-1 flex-row items-center justify-center py-3.5 rounded-lg border ${
+                isSaved ? 'bg-primary/10 border-primary' : 'bg-surface-alt-light dark:bg-surface-alt border-border-light dark:border-border'
+              }`}
+              accessibilityLabel={isSaved ? 'Remove from saved' : 'Save meme'}
+              accessibilityState={{ selected: isSaved }}
+            >
+              <Bookmark size={16} color={isSaved ? '#8B5CF6' : '#F5F5F0'} fill={isSaved ? '#8B5CF6' : 'transparent'} />
+              <Text className={`text-sm font-semibold ml-2 ${isSaved ? 'text-primary' : 'text-text-primary-light dark:text-text-primary'}`}>
+                Save
+              </Text>
+            </Pressable>
+          </View>
+          <View className="flex-row mt-2.5" style={{ gap: 10 }}>
             <Pressable
               onPress={onShare}
               className="flex-1 flex-row items-center justify-center py-3.5 rounded-lg bg-surface-alt-light dark:bg-surface-alt border border-border-light dark:border-border"
