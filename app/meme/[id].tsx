@@ -258,7 +258,7 @@ export default function MemeDetailsScreen() {
 
   const aspectRatio = meme?.width && meme?.height ? meme.width / meme.height : 0.8;
   const mediaHeight = width / aspectRatio;
-  const shareUrl = meme ? `https://memedrop.app/meme/${meme.id}` : '';
+  const shareUrl = meme ? `${meme.mediaUrl}` : '';
   const isOwner = !!meme && !!userId && meme.uploader.id === userId;
 
   const onShare = async () => {

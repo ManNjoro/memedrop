@@ -1,19 +1,20 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, Pressable, RefreshControl, Image, useColorScheme } from 'react-native';
-import { useRouter } from 'expo-router';
+import ThemedSafeAreaView from '@/components/ThemedSafeAreaView';
 import { useUser } from '@clerk/expo';
+import { useRouter } from 'expo-router';
 import { Search, WifiOff } from 'lucide-react-native';
-import { CategoryChip } from '../../components/Chips';
-import { MediaCard } from '../../components/MediaCard';
+import React, { useMemo, useState } from 'react';
+import { Image, Pressable, RefreshControl, ScrollView, Share, Text, useColorScheme, View } from 'react-native';
 import { Avatar } from '../../components/Avatar';
+import { CategoryChip } from '../../components/Chips';
 import { EmptyState } from '../../components/EmptyState';
+import { MediaCard } from '../../components/MediaCard';
 import { SkeletonFeedList } from '../../components/SkeletonLoader';
-import { useMemeFeed } from '../../lib/hooks/useMemeFeed';
-import { toCardMeme } from '../../lib/mappers';
-import { recordDownload } from '../../lib/api/memes';
 import { useToast } from '../../components/Toast';
 import type { FetchMemesParams } from '../../lib/api/memes';
-import { SafeAreaView } from '@/components/CustomSafeAreaView';
+import { recordDownload } from '../../lib/api/memes';
+import { useMemeFeed } from '../../lib/hooks/useMemeFeed';
+import { toCardMeme } from '../../lib/mappers';
+import { ApiMemeListItem } from '@/lib/api/types';
 
 const CATEGORIES = ['Trending', 'Latest', 'Videos', 'Images', 'Popular'] as const;
 type Category = (typeof CATEGORIES)[number];
@@ -55,10 +56,17 @@ export default function HomeScreen() {
     }
   };
 
+  const onShare = async (meme: ApiMemeListItem) => {
+    const shareUrl = meme ? `${meme.mediaUrl}` : '';
+      try {
+        await Share.share({ message: `Check this out on MemeDrop: ${shareUrl}` });
+      } catch {}
+    };
+
   const [featured, ...rest] = memes;
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-bg-light dark:bg-bg">
+    <ThemedSafeAreaView>
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#8B5CF6" />}
@@ -150,13 +158,13 @@ export default function HomeScreen() {
                   variant="feed"
                   onPress={() => router.push(`/meme/${item.id}`)}
                   onDownload={() => onDownload(item.id)}
-                  onShare={() => {}}
+                  onShare={() => {onShare(item)}}
                 />
               ))}
             </View>
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </ThemedSafeAreaView>
   );
 }
