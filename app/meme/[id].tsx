@@ -223,16 +223,6 @@ export default function MemeDetailsScreen() {
   // dev double-invoke, and against re-recording a view on every refetch.
   const viewRecordedRef = useRef(false);
 
-  // getToken (and technically isSignedIn) from useAuth() aren't guaranteed
-  // to be referentially stable across renders — Clerk's context can
-  // re-render for reasons unrelated to this screen (token refresh checks,
-  // etc.), handing back a new getToken identity each time. If load() had
-  // depended on them directly in its useCallback deps, that would recreate
-  // load() on every such render, re-fire the effect below, and put the
-  // screen into a load → setLoading(true) → setLoading(false) → repeat
-  // cycle — exactly what "keeps flickering" looks like. Reading them via a
-  // ref instead means load()'s identity depends only on `id`, so the effect
-  // only re-runs when the person actually navigates to a different meme.
   const authRef = useRef({ isSignedIn, getToken });
   useEffect(() => {
     authRef.current = { isSignedIn, getToken };
