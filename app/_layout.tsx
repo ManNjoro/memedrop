@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, useSegments } from 'expo-router';
 import { ClerkProvider, useAuth, useUser } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -49,6 +49,18 @@ function PostHogIdentity() {
   return null;
 }
 
+function PostHogScreenTracker() {
+  const posthogClient = usePostHog();
+  const segments = useSegments();
+
+  useEffect(() => {
+    const screenName = segments.length > 0 ? segments.join('/') : 'index';
+    posthogClient.screen(screenName);
+  }, [posthogClient, segments]);
+
+  return null;
+}
+
 function RootLayoutNav() {
   const { isLoaded, isSignedIn } = useAuth();
 
@@ -91,6 +103,7 @@ export default function RootLayout() {
           <PostHogProvider client={posthog}>
             <PostHogErrorBoundary>
               <PostHogIdentity />
+              <PostHogScreenTracker />
               <ToastProvider>
                 <OfflineBanner />
                 <RootLayoutNav />
