@@ -1,5 +1,8 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { fetchMemes, type FetchMemesParams } from '../api/memes';
+import {
+  fetchMemes,
+  type FetchMemesParams,
+} from '../api/memes';
 
 export function useMemeFeed(
   params: FetchMemesParams,
@@ -18,7 +21,8 @@ export function useMemeFeed(
 
     initialPageParam: null as string | null,
 
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    getNextPageParam: (lastPage) =>
+      lastPage.nextCursor ?? undefined,
 
     enabled,
 
