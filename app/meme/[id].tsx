@@ -45,6 +45,7 @@ import type { ApiMemeDetail } from '../../lib/api/types';
 import { ApiClientError } from '../../lib/apiClient';
 import { formatRelativeTime } from '../../lib/formatRelativeTime';
 import ThemedSafeAreaView from '@/components/ThemedSafeAreaView';
+import { requireEnv } from '@/lib/env';
 
 const { width } = Dimensions.get('window');
 
@@ -218,6 +219,7 @@ export default function MemeDetailsScreen() {
   const [isSaved, setIsSaved] = useState(false);
   const [likeInFlight, setLikeInFlight] = useState(false);
   const [saveInFlight, setSaveInFlight] = useState(false);
+  const webUrl = requireEnv('EXPO_PUBLIC_WEB_URL')
 
   // Guards against double-firing the view count in React 18 Strict Mode's
   // dev double-invoke, and against re-recording a view on every refetch.
@@ -258,13 +260,15 @@ export default function MemeDetailsScreen() {
 
   const aspectRatio = meme?.width && meme?.height ? meme.width / meme.height : 0.8;
   const mediaHeight = width / aspectRatio;
-  const shareUrl = meme ? `${meme.mediaUrl}` : '';
+  const shareUrl = meme ? `${webUrl}/meme/${meme.id}` : '';
   const isOwner = !!meme && !!userId && meme.uploader.id === userId;
 
   const onShare = async () => {
     try {
       await Share.share({ message: `Check this out on MemeDrop: ${shareUrl}` });
-    } catch {}
+    } catch {
+      showToast({ message: 'Couldn\u2019t share this meme. Try again.', variant: 'error' });
+    }
   };
 
   const onCopyLink = async () => {
