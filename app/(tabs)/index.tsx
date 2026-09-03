@@ -379,6 +379,10 @@ export default function HomeScreen() {
          * Adjust/remove if MediaCard has highly variable heights.
          */
         removeClippedSubviews
+        initialNumToRender={5}
+        maxToRenderPerBatch={5}
+        windowSize={7}
+        updateCellsBatchingPeriod={50}
       />
     </ThemedSafeAreaView>
   );
