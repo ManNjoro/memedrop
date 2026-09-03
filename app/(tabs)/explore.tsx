@@ -24,6 +24,7 @@ import { recordDownload } from "../../lib/api/memes";
 import type { ApiMemeListItem } from "../../lib/api/types";
 import { useMemeFeed } from "../../lib/hooks/useMemeFeed";
 import { toCardMeme } from "../../lib/mappers";
+import { requireEnv } from "@/lib/env";
 
 const CATEGORIES = [
   "Trending",
@@ -131,7 +132,8 @@ export default function HomeScreen() {
   );
 
   const onShare = useCallback(async (meme: ApiMemeListItem) => {
-    const shareUrl = meme.mediaUrl;
+    const webUrl = requireEnv('EXPO_PUBLIC_WEB_URL')
+    const shareUrl = `${webUrl}/meme/${meme.id}`;
 
     try {
       await Share.share({
@@ -139,8 +141,12 @@ export default function HomeScreen() {
       });
     } catch {
       // User cancelled share dialog or sharing failed.
+      showToast({
+        message: "Failed to share meme.",
+        variant: "error",
+      });
     }
-  }, []);
+  }, [showToast]);
 
   const handleLoadMore = () => {
     if (!hasNextPage || isFetchingNextPage) {
