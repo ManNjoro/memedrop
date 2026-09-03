@@ -1,70 +1,71 @@
-import React, { useMemo, useState } from 'react';
+import { useUser } from "@clerk/expo";
+import { useRouter } from "expo-router";
+import { Search, WifiOff } from "lucide-react-native";
+import React, { useCallback, useMemo, useState } from "react";
 import {
-  View,
-  Text,
   FlatList,
+  Image,
   Pressable,
   RefreshControl,
-  Image,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useUser } from '@clerk/expo';
-import { Search, WifiOff } from 'lucide-react-native';
+  Share,
+  Text,
+  View,
+} from "react-native";
 
-import { CategoryChip } from '../../components/Chips';
-import { MediaCard } from '../../components/MediaCard';
-import { Avatar } from '../../components/Avatar';
-import { EmptyState } from '../../components/EmptyState';
-import { SkeletonFeedList } from '../../components/SkeletonLoader';
-import { useMemeFeed } from '../../lib/hooks/useMemeFeed';
-import { toCardMeme } from '../../lib/mappers';
-import { recordDownload } from '../../lib/api/memes';
-import { useToast } from '../../components/Toast';
-import type { FetchMemesParams } from '../../lib/api/memes';
-import type { ApiMemeListItem } from '../../lib/api/types';
-import { SafeAreaView } from '@/components/CustomSafeAreaView';
+import { SafeAreaView } from "@/components/CustomSafeAreaView";
+import { Avatar } from "../../components/Avatar";
+import { CategoryChip } from "../../components/Chips";
+import { EmptyState } from "../../components/EmptyState";
+import { MediaCard } from "../../components/MediaCard";
+import { SkeletonFeedList } from "../../components/SkeletonLoader";
+import { useToast } from "../../components/Toast";
+import type { FetchMemesParams } from "../../lib/api/memes";
+import { recordDownload } from "../../lib/api/memes";
+import type { ApiMemeListItem } from "../../lib/api/types";
+import { useMemeFeed } from "../../lib/hooks/useMemeFeed";
+import { toCardMeme } from "../../lib/mappers";
 
 const CATEGORIES = [
-  'Trending',
-  'Latest',
-  'Videos',
-  'Images',
-  'Popular',
+  "Trending",
+  "Latest",
+  "Videos",
+  "Images",
+  "Popular",
 ] as const;
 
 type Category = (typeof CATEGORIES)[number];
 
 function paramsForCategory(category: Category): FetchMemesParams {
   switch (category) {
-    case 'Trending':
+    case "Trending":
       return {
-        sort: 'most_popular',
+        sort: "most_popular",
         limit: 10,
       };
 
-    case 'Latest':
+    case "Latest":
       return {
-        sort: 'newest',
+        sort: "newest",
         limit: 10,
       };
 
-    case 'Videos':
+    case "Videos":
       return {
-        mediaType: 'video',
-        sort: 'newest',
+        mediaType: "video",
+        sort: "newest",
         limit: 10,
       };
 
-    case 'Images':
+    case "Images":
       return {
-        mediaType: 'image',
-        sort: 'newest',
+        mediaType: "image",
+        sort: "newest",
         limit: 10,
       };
 
-    case 'Popular':
+    case "Popular":
       return {
-        sort: 'most_downloaded',
+        sort: "most_downloaded",
         limit: 10,
       };
   }
@@ -75,12 +76,11 @@ export default function HomeScreen() {
   const { user } = useUser();
   const { showToast } = useToast();
 
-  const [activeCategory, setActiveCategory] =
-    useState<Category>('Trending');
+  const [activeCategory, setActiveCategory] = useState<Category>("Trending");
 
   const params = useMemo(
     () => paramsForCategory(activeCategory),
-    [activeCategory]
+    [activeCategory],
   );
 
   const {
@@ -108,24 +108,39 @@ export default function HomeScreen() {
    */
   const memes = useMemo(
     () => data?.pages.flatMap((page) => page.memes) ?? [],
-    [data]
+    [data],
   );
 
-  const onDownload = async (id: string) => {
-    try {
-      await recordDownload(id);
+  const onDownload = useCallback(
+    async (id: string) => {
+      try {
+        await recordDownload(id);
 
-      showToast({
-        message: 'Download started',
-        variant: 'success',
+        showToast({
+          message: "Download started",
+          variant: "success",
+        });
+      } catch {
+        showToast({
+          message: "Couldn’t start the download. Try again.",
+          variant: "error",
+        });
+      }
+    },
+    [showToast],
+  );
+
+  const onShare = useCallback(async (meme: ApiMemeListItem) => {
+    const shareUrl = meme.mediaUrl;
+
+    try {
+      await Share.share({
+        message: `Check this out on MemeDrop: ${shareUrl}`,
       });
     } catch {
-      showToast({
-        message: 'Couldn’t start the download. Try again.',
-        variant: 'error',
-      });
+      // User cancelled share dialog or sharing failed.
     }
-  };
+  }, []);
 
   const handleLoadMore = () => {
     if (!hasNextPage || isFetchingNextPage) {
@@ -160,7 +175,7 @@ export default function HomeScreen() {
 
               <Avatar
                 uri={user?.imageUrl}
-                name={user?.username ?? 'You'}
+                name={user?.username ?? "You"}
                 size="sm"
               />
             </View>
@@ -169,7 +184,7 @@ export default function HomeScreen() {
           {/* Hero greeting */}
           <View className="px-4 mb-5">
             <Text className="text-text-primary-light dark:text-text-primary text-[26px] font-extrabold leading-8">
-              Your daily dose{'\n'}of internet chaos.
+              Your daily dose{"\n"}of internet chaos.
             </Text>
           </View>
 
@@ -214,7 +229,7 @@ export default function HomeScreen() {
 
             <View className="flex-row items-center">
               <Pressable
-                onPress={() => router.push('/search')}
+                onPress={() => router.push("/search")}
                 hitSlop={8}
                 accessibilityLabel="Search"
                 className="w-10 h-10 rounded-full bg-surface-alt-light dark:bg-surface-alt items-center justify-center mr-3"
@@ -223,12 +238,12 @@ export default function HomeScreen() {
               </Pressable>
 
               <Pressable
-                onPress={() => router.push('/(tabs)/profile')}
+                onPress={() => router.push("/(tabs)/profile")}
                 accessibilityLabel="Your profile"
               >
                 <Avatar
                   uri={user?.imageUrl}
-                  name={user?.username ?? 'You'}
+                  name={user?.username ?? "You"}
                   size="sm"
                 />
               </Pressable>
@@ -237,7 +252,7 @@ export default function HomeScreen() {
 
           <View className="px-4 mb-5">
             <Text className="text-text-primary-light dark:text-text-primary text-[26px] font-extrabold leading-8">
-              Your daily dose{'\n'}of internet chaos.
+              Your daily dose{"\n"}of internet chaos.
             </Text>
           </View>
 
@@ -266,7 +281,7 @@ export default function HomeScreen() {
             subtitle={
               error instanceof Error
                 ? error.message
-                : 'Something went wrong while loading your memes.'
+                : "Something went wrong while loading your memes."
             }
             actionLabel="Try Again"
             onAction={() => refetch()}
@@ -289,7 +304,7 @@ export default function HomeScreen() {
 
             <View className="flex-row items-center">
               <Pressable
-                onPress={() => router.push('/search')}
+                onPress={() => router.push("/search")}
                 hitSlop={8}
                 accessibilityLabel="Search"
                 className="w-10 h-10 rounded-full bg-surface-alt-light dark:bg-surface-alt items-center justify-center mr-3"
@@ -298,12 +313,12 @@ export default function HomeScreen() {
               </Pressable>
 
               <Pressable
-                onPress={() => router.push('/(tabs)/profile')}
+                onPress={() => router.push("/(tabs)/profile")}
                 accessibilityLabel="Your profile"
               >
                 <Avatar
                   uri={user?.imageUrl}
-                  name={user?.username ?? 'You'}
+                  name={user?.username ?? "You"}
                   size="sm"
                 />
               </Pressable>
@@ -313,7 +328,7 @@ export default function HomeScreen() {
           {/* Hero */}
           <View className="px-4 mb-5">
             <Text className="text-text-primary-light dark:text-text-primary text-[26px] font-extrabold leading-8">
-              Your daily dose{'\n'}of internet chaos.
+              Your daily dose{"\n"}of internet chaos.
             </Text>
           </View>
 
@@ -359,7 +374,7 @@ export default function HomeScreen() {
 
           <View className="flex-row items-center">
             <Pressable
-              onPress={() => router.push('/search')}
+              onPress={() => router.push("/search")}
               hitSlop={8}
               accessibilityLabel="Search"
               className="w-10 h-10 rounded-full bg-surface-alt-light dark:bg-surface-alt items-center justify-center mr-3"
@@ -368,12 +383,12 @@ export default function HomeScreen() {
             </Pressable>
 
             <Pressable
-              onPress={() => router.push('/(tabs)/profile')}
+              onPress={() => router.push("/(tabs)/profile")}
               accessibilityLabel="Your profile"
             >
               <Avatar
                 uri={user?.imageUrl}
-                name={user?.username ?? 'You'}
+                name={user?.username ?? "You"}
                 size="sm"
               />
             </Pressable>
@@ -383,7 +398,7 @@ export default function HomeScreen() {
         {/* Hero greeting */}
         <View className="px-4 mb-5">
           <Text className="text-text-primary-light dark:text-text-primary text-[26px] font-extrabold leading-8">
-            Your daily dose{'\n'}of internet chaos.
+            Your daily dose{"\n"}of internet chaos.
           </Text>
         </View>
 
@@ -418,7 +433,7 @@ export default function HomeScreen() {
                 uri: toCardMeme(featured).mediaUrl,
               }}
               style={{
-                width: '100%',
+                width: "100%",
                 height: 260,
               }}
               resizeMode="cover"
@@ -445,23 +460,25 @@ export default function HomeScreen() {
    * The first meme is featured in ListHeaderComponent,
    * so FlatList receives everything after it.
    */
-  const feedMemes = useMemo(
-    () => memes.slice(1),
-    [memes]
-  );
+  const feedMemes = useMemo(() => memes.slice(1), [memes]);
 
-  const renderItem = ({
-    item,
-  }: {
-    item: ApiMemeListItem;
-  }) => (
-    <MediaCard
-      meme={toCardMeme(item)}
-      variant="feed"
-      onPress={() => router.push(`/meme/${item.id}`)}
-      onDownload={() => onDownload(item.id)}
-      onShare={() => {}}
-    />
+  const renderItem = useCallback(
+    ({ item }: { item: ApiMemeListItem }) => {
+      const meme = toCardMeme(item);
+
+      return (
+        <MediaCard
+          meme={meme}
+          variant="feed"
+          onPress={() => router.push(`/meme/${item.id}`)}
+          onDownload={() => onDownload(item.id)}
+          onShare={() => {
+            onShare(item);
+          }}
+        />
+      );
+    },
+    [router, onDownload, onShare],
   );
 
   const renderFooter = () => {
@@ -487,10 +504,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView
-      edges={['top']}
-      className="flex-1 bg-bg-light dark:bg-bg"
-    >
+    <SafeAreaView edges={["top"]} className="flex-1 bg-bg-light dark:bg-bg">
       <FlatList
         data={feedMemes}
         keyExtractor={(item) => item.id}
@@ -511,6 +525,10 @@ export default function HomeScreen() {
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
         removeClippedSubviews
+        initialNumToRender={5}
+        maxToRenderPerBatch={5}
+        windowSize={7}
+        updateCellsBatchingPeriod={50}
       />
     </SafeAreaView>
   );

@@ -1,8 +1,8 @@
-import ThemedSafeAreaView from '@/components/ThemedSafeAreaView';
-import { useUser } from '@clerk/expo';
-import { useRouter } from 'expo-router';
-import { Search, WifiOff } from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
+import ThemedSafeAreaView from "@/components/ThemedSafeAreaView";
+import { useUser } from "@clerk/expo";
+import { useRouter } from "expo-router";
+import { Search, WifiOff } from "lucide-react-native";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   FlatList,
   Image,
@@ -12,62 +12,62 @@ import {
   Text,
   useColorScheme,
   View,
-} from 'react-native';
+} from "react-native";
 
-import { Avatar } from '../../components/Avatar';
-import { CategoryChip } from '../../components/Chips';
-import { EmptyState } from '../../components/EmptyState';
-import { MediaCard } from '../../components/MediaCard';
-import { SkeletonFeedList } from '../../components/SkeletonLoader';
-import { useToast } from '../../components/Toast';
+import { Avatar } from "../../components/Avatar";
+import { CategoryChip } from "../../components/Chips";
+import { EmptyState } from "../../components/EmptyState";
+import { MediaCard } from "../../components/MediaCard";
+import { SkeletonFeedList } from "../../components/SkeletonLoader";
+import { useToast } from "../../components/Toast";
 
-import type { FetchMemesParams } from '../../lib/api/memes';
-import { recordDownload } from '../../lib/api/memes';
-import { useMemeFeed } from '../../lib/hooks/useMemeFeed';
-import { toCardMeme } from '../../lib/mappers';
-import type { ApiMemeListItem } from '../../lib/api/types';
+import type { FetchMemesParams } from "../../lib/api/memes";
+import { recordDownload } from "../../lib/api/memes";
+import type { ApiMemeListItem } from "../../lib/api/types";
+import { useMemeFeed } from "../../lib/hooks/useMemeFeed";
+import { toCardMeme } from "../../lib/mappers";
 
 const CATEGORIES = [
-  'Trending',
-  'Latest',
-  'Videos',
-  'Images',
-  'Popular',
+  "Trending",
+  "Latest",
+  "Videos",
+  "Images",
+  "Popular",
 ] as const;
 
 type Category = (typeof CATEGORIES)[number];
 
 function paramsForCategory(category: Category): FetchMemesParams {
   switch (category) {
-    case 'Trending':
+    case "Trending":
       return {
-        sort: 'most_popular',
+        sort: "most_popular",
         limit: 10,
       };
 
-    case 'Latest':
+    case "Latest":
       return {
-        sort: 'newest',
+        sort: "newest",
         limit: 10,
       };
 
-    case 'Videos':
+    case "Videos":
       return {
-        mediaType: 'video',
-        sort: 'newest',
+        mediaType: "video",
+        sort: "newest",
         limit: 10,
       };
 
-    case 'Images':
+    case "Images":
       return {
-        mediaType: 'image',
-        sort: 'newest',
+        mediaType: "image",
+        sort: "newest",
         limit: 10,
       };
 
-    case 'Popular':
+    case "Popular":
       return {
-        sort: 'most_downloaded',
+        sort: "most_downloaded",
         limit: 10,
       };
   }
@@ -78,13 +78,12 @@ export default function HomeScreen() {
   const { user } = useUser();
   const { showToast } = useToast();
 
-  const [activeCategory, setActiveCategory] =
-    useState<Category>('Trending');
+  const [activeCategory, setActiveCategory] = useState<Category>("Trending");
 
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const isDark = colorScheme === "dark";
 
-  const iconColor = isDark ? '#F5F5F0' : '#121214';
+  const iconColor = isDark ? "#F5F5F0" : "#121214";
 
   const params = useMemo(
     () => paramsForCategory(activeCategory),
@@ -126,27 +125,28 @@ export default function HomeScreen() {
 
   const [featured, ...rest] = memes;
 
-  const featuredCard = featured
-    ? toCardMeme(featured)
-    : null;
+  const featuredCard = featured ? toCardMeme(featured) : null;
 
-  const onDownload = async (id: string) => {
-    try {
-      await recordDownload(id);
+  const onDownload = useCallback(
+    async (id: string) => {
+      try {
+        await recordDownload(id);
 
-      showToast({
-        message: 'Download started',
-        variant: 'success',
-      });
-    } catch {
-      showToast({
-        message: 'Couldn’t start the download. Try again.',
-        variant: 'error',
-      });
-    }
-  };
+        showToast({
+          message: "Download started",
+          variant: "success",
+        });
+      } catch {
+        showToast({
+          message: "Couldn’t start the download. Try again.",
+          variant: "error",
+        });
+      }
+    },
+    [showToast],
+  );
 
-  const onShare = async (meme: ApiMemeListItem) => {
+  const onShare = useCallback(async (meme: ApiMemeListItem) => {
     const shareUrl = meme.mediaUrl;
 
     try {
@@ -156,7 +156,7 @@ export default function HomeScreen() {
     } catch {
       // User cancelled share dialog or sharing failed.
     }
-  };
+  }, []);
 
   const handleLoadMore = () => {
     /**
@@ -188,24 +188,21 @@ export default function HomeScreen() {
 
           <View className="flex-row items-center">
             <Pressable
-              onPress={() => router.push('/search')}
+              onPress={() => router.push("/search")}
               hitSlop={8}
               accessibilityLabel="Search"
               className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-surface-alt-light dark:bg-surface-alt"
             >
-              <Search
-                size={20}
-                color={iconColor}
-              />
+              <Search size={20} color={iconColor} />
             </Pressable>
 
             <Pressable
-              onPress={() => router.push('/(tabs)/profile')}
+              onPress={() => router.push("/(tabs)/profile")}
               accessibilityLabel="Your profile"
             >
               <Avatar
                 uri={user?.imageUrl}
-                name={user?.username ?? 'You'}
+                name={user?.username ?? "You"}
                 size="sm"
               />
             </Pressable>
@@ -215,7 +212,7 @@ export default function HomeScreen() {
         {/* Hero greeting */}
         <View className="mb-5 px-4">
           <Text className="text-text-primary-light dark:text-text-primary text-[26px] font-extrabold leading-8">
-            Your daily dose{'\n'}
+            Your daily dose{"\n"}
             of internet chaos.
           </Text>
         </View>
@@ -243,18 +240,15 @@ export default function HomeScreen() {
         {/* Featured meme */}
         {featuredCard && (
           <Pressable
-            onPress={() =>
-              router.push(`/meme/${featuredCard.id}`)
-            }
+            onPress={() => router.push(`/meme/${featuredCard.id}`)}
             className="mx-4 mb-5 overflow-hidden rounded-lg bg-surface-light dark:bg-surface"
           >
             <Image
               source={{
-                uri:
-                  featuredCard.mediaUrl
+                uri: featuredCard.mediaUrl,
               }}
               style={{
-                width: '100%',
+                width: "100%",
                 height: 260,
               }}
               resizeMode="cover"
@@ -325,7 +319,7 @@ export default function HomeScreen() {
           subtitle={
             error instanceof Error
               ? error.message
-              : 'Something went wrong. Check your connection.'
+              : "Something went wrong. Check your connection."
           }
           actionLabel="Try Again"
           onAction={() => refetch()}
@@ -360,9 +354,7 @@ export default function HomeScreen() {
             <MediaCard
               meme={toCardMeme(item)}
               variant="feed"
-              onPress={() =>
-                router.push(`/meme/${item.id}`)
-              }
+              onPress={() => router.push(`/meme/${item.id}`)}
               onDownload={() => onDownload(item.id)}
               onShare={() => onShare(item)}
             />
