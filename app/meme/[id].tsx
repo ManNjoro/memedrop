@@ -456,7 +456,7 @@ export default function MemeDetailsScreen() {
 
           <Text className="text-text-muted text-xs mb-5">
             {likesCount} {likesCount === 1 ? 'like' : 'likes'} · {meme.viewsCount}{' '}
-            {meme.viewsCount === 1 ? 'view' : 'views'}
+            {meme.viewsCount === 1 ? 'view' : 'views'} . {meme.downloadsCount} {meme.downloadsCount === 1 ? 'download' : 'downloads'}
           </Text>
 
           {/* Actions */}
