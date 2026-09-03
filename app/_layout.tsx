@@ -1,8 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Stack } from 'expo-router';
 import { ClerkProvider, useAuth, useUser } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
   PostHogErrorBoundary,
   PostHogProvider,
@@ -80,12 +81,25 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: 2,
+            staleTime: 30_000,
+          },
+        },
+      }),
+  );
   useEffect(() => {
     applyStoredThemePreference();
   }, []);
 
   return (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+      <QueryClientProvider client={queryClient}>
+
       <SafeAreaProvider>
         {posthog ? (
           <PostHogProvider client={posthog}>
@@ -104,6 +118,7 @@ export default function RootLayout() {
           </ToastProvider>
         )}
       </SafeAreaProvider>
+      </QueryClientProvider>
     </ClerkProvider>
   );
 }
